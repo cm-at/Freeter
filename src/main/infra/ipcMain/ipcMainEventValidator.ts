@@ -20,6 +20,9 @@ export function createIpcMainEventValidator(channelPrefix: string, authority: st
     const { url } = event.senderFrame;
     const { isSenderFrameMain: isMainFrame } = event;
 
+    const isDevMode = process.env.NODE_ENV === 'development';
+    const allowedAuthorities = isDevMode ? [authority, 'localhost:4004'] : [authority];
+
     let host = '';
     try {
       host = new URL(url).host;
@@ -28,8 +31,8 @@ export function createIpcMainEventValidator(channelPrefix: string, authority: st
       return false;
     }
 
-    if (host !== authority) {
-      console.error(`IpcMain event: Bad origin of '${host}' on channel '${channel}.`)
+    if (!allowedAuthorities.includes(host)) {
+      console.error(`IpcMain event: Bad origin of '${host}' on channel '${channel}'.`)
       return false;
     }
 

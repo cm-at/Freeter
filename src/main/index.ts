@@ -69,6 +69,7 @@ import { createChildProcessProvider } from '@/infra/childProcessProvider/childPr
 import { createOpenPathUseCase } from '@/application/useCases/shell/openPath';
 import { createCopyWidgetDataStorageUseCase } from '@/application/useCases/widgetDataStorage/copyWidgetDataStorage';
 import { createOpenAppUseCase } from '@/application/useCases/shell/openApp';
+import { initTerminalManager } from '@/infra/terminal/terminalManager';
 
 let appWindow: BrowserWindow | null = null; // ref to the app window
 
@@ -219,9 +220,13 @@ if (!app.requestSingleInstanceLock()) {
     }, () => {
       const getWindowStateUseCase = createGetWindowStateUseCase({ windowStore })
       const setWindowStateUseCase = createSetWindowStateUseCase({ windowStore })
+      
+      const url = isDevMode ? 'http://localhost:4004' : `${schemeFreeterFile}://${hostFreeterApp}/index.html`;
+      console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> LOADING URL: ', url);
+
       appWindow = createRendererWindow(
         `${__dirname}/preload.js`,
-        `${schemeFreeterFile}://${hostFreeterApp}/index.html`,
+        url,
         isLinux ? join(app.getAppPath(), 'assets', 'app-icons', '256.png') : undefined,
         uaOriginal,
         {
@@ -241,6 +246,7 @@ if (!app.requestSingleInstanceLock()) {
       });
 
       initTrayUseCase(appWindow);
+      initTerminalManager();
     })
   });
 

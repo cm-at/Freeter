@@ -17,7 +17,8 @@ module.exports = {
   mode: isProd ? 'production' : 'development',
   devtool: isProd ? undefined : 'source-map',
   entry: {
-    main: path.join(__dirname, 'src', 'main', 'index.ts'),
+    main: './src/main/index.ts',
+    preload: './src/renderer/preload/index.ts',
   },
   output: {
     path: path.join(__dirname, 'build'),
@@ -25,9 +26,12 @@ module.exports = {
   },
   resolve: {
     extensions: ['.ts', '.js'],
-    plugins: [new TsconfigPathsPlugin({
-      configFile
-    })]
+    plugins: [
+      new TsconfigPathsPlugin({
+        configFile,
+        baseUrl: path.join(__dirname, 'src'),
+      }),
+    ],
   },
   target: 'electron-main',
   module: {
@@ -46,7 +50,11 @@ module.exports = {
           },
         ],
         exclude: /node_modules/,
-      }
+      },
+      {
+        test: /\.node$/,
+        type: 'asset/resource',
+      },
     ]
   },
   plugins: [

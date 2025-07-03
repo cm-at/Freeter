@@ -155,7 +155,18 @@ function createStore() {
 
   const firstRunState = createAppState();
 
-  const appState = entityStateActions.widgetTypes.setAll(firstRunState, registry.getWidgetTypes());
+  const widgetTypes = registry.getWidgetTypes();
+  let appState = entityStateActions.widgetTypes.setAll(firstRunState, widgetTypes);
+  appState = {
+    ...appState,
+    ui: {
+      ...appState.ui,
+      palette: {
+        ...appState.ui.palette,
+        widgetTypeIds: widgetTypes.map(w => w.id)
+      }
+    }
+  }
   const dataStorage = prepareDataStorageForRenderer(createAppDataStorage());
   const [appStore, appStoreForUi] = createAppStore({
     stateStorage: createAppStateStorage(

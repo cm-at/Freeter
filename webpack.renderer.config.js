@@ -49,7 +49,12 @@ module.exports = {
     extensions: ['.tsx', '.ts', '.js'],
     plugins: [new TsconfigPathsPlugin({
       configFile
-    })]
+    })],
+    fallback: {
+      'fs': false,
+      'path': false,
+    },
+    alias: {}
   },
   target: 'web',
   module: {
@@ -83,9 +88,13 @@ module.exports = {
           {
             loader: 'css-loader',
             options: {
-              modules: true,
-              sourceMap: true,
+              modules: {
+                exportLocalsConvention: 'asIs',
+                localIdentName: isDev ? '[path][name]__[local]--[hash:base64:5]' : '[hash:base64:8]'
+              },
               importLoaders: 1,
+              sourceMap: true,
+              esModule: false
             },
           },
           'sass-loader',
@@ -144,9 +153,9 @@ module.exports = {
     },
     hot: false,
     liveReload: false,
-    port: 4000,
+    port: 4004,
     client: {
-      webSocketURL: 'ws://localhost:4000/ws',
+      webSocketURL: 'ws://localhost:4004/ws',
     },
     webSocketServer: false,
     allowedHosts: ['freeter-app'],
