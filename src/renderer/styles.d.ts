@@ -9,7 +9,7 @@ declare module '*.module.css' {
   export = classes;
 }
 
-// For SCSS
+// For SCSS  
 declare module '*.module.scss' {
   const classes: { [key: string]: string };
   export = classes;

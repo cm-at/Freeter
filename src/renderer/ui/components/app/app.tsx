@@ -27,6 +27,10 @@ export function createAppComponent({
   useAppViewModel
 }: Deps) {
   function App() {
+    console.log('CSS Module styles:', styles);
+    console.log('Type:', typeof styles);
+    console.log('Keys:', Object.keys(styles));
+    console.log('Has main-screen?', 'main-screen' in styles);
     const {modalScreens, hasModalScreens, hasProjects, contextMenuHandler, uiThemeId, hasTopBar} = useAppViewModel();
     return (
       <div onContextMenu={contextMenuHandler}>
