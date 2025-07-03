@@ -45,6 +45,11 @@ interface WidgetApiModules {
   };
   readonly terminal: {
     execCmdLines: (cmdLines: ReadonlyArray<string>, cwd?: string) => void;
+    createTerminal: (widgetId: string, shell?: string, cwd?: string) => Promise<{ ptyId: number }>;
+    writeToTerminal: (ptyId: number, data: string) => Promise<void>;
+    closeTerminal: (ptyId: number) => Promise<void>;
+    onTerminalData: (callback: (pid: number, data: string) => void) => void;
+    onTerminalExit: (callback: (pid: number) => void) => void;
   }
   readonly widgets: {
     getWidgetsInCurrentWorkflow<T extends object>(widgetTypeId: string): ReadonlyArray<WidgetApiWidget<T>>;

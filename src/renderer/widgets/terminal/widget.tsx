@@ -5,13 +5,11 @@
 
 import { ReactComponent, WidgetReactComponentProps } from '@/widgets/appModules';
 import { Settings } from './settings';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import 'xterm/css/xterm.css';
 import styles from './widget.module.scss';
-import { electronIpcRenderer as ipcRenderer } from '@/infra/mainApi/mainApi';
-import { ipcTerminalCloseChannel, ipcTerminalCreateChannel, ipcTerminalWriteChannel, IPC_TERMINAL_CHANNEL } from '@common/ipc/channels';
 
 const darkTheme = {
   background: '#1e1e1e',
@@ -56,13 +54,23 @@ const lightTheme = {
 };
 
 function WidgetComp({id, settings, widgetApi}: WidgetReactComponentProps<Settings>) {
+  console.log('[TerminalWidget] Rendering terminal widget:', { id, settings, hasWidgetApi: !!widgetApi });
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<Terminal | null>(null);
   const ptyIdRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (!terminalRef.current) return;
+    console.log('[TerminalWidget] Main useEffect triggered');
+    console.log('[TerminalWidget] terminalRef.current:', !!terminalRef.current);
+    console.log('[TerminalWidget] widgetApi:', !!widgetApi);
+    console.log('[TerminalWidget] widgetApi.terminal:', widgetApi?.terminal);
+    
+    if (!terminalRef.current || !widgetApi) {
+      console.warn('[TerminalWidget] Missing dependencies, returning early');
+      return;
+    }
 
+    console.log('[TerminalWidget] Creating Terminal instance');
     const term = new Terminal({
       fontSize: settings.fontSize,
       fontFamily: settings.fontFamily,
@@ -70,24 +78,54 @@ function WidgetComp({id, settings, widgetApi}: WidgetReactComponentProps<Setting
       cursorBlink: true
     });
     xtermRef.current = term;
+    
+    console.log('[TerminalWidget] Opening terminal in DOM element');
     term.open(terminalRef.current);
     
-    (ipcRenderer.invoke as any)(ipcTerminalCreateChannel, id, settings.shell, settings.cwd)
-    .then(({ ptyId }: any) => {
+    console.log('[TerminalWidget] Getting terminal API from widget API');
+    const terminalApi = widgetApi.terminal;
+    console.log('[TerminalWidget] Terminal API methods:', Object.keys(terminalApi));
+    
+    console.log('[TerminalWidget] Calling createTerminal');
+    terminalApi.createTerminal(id, settings.shell, settings.cwd)
+    .then(({ ptyId }) => {
+      console.log('[TerminalWidget] Terminal created successfully with ptyId:', ptyId);
       ptyIdRef.current = ptyId;
+      
+      console.log('[TerminalWidget] Setting up onData handler');
       term.onData(data => {
-        (ipcRenderer.invoke as any)(ipcTerminalWriteChannel, ptyId, String(data));
+        console.log('[TerminalWidget] Terminal data input:', data);
+        terminalApi.writeToTerminal(ptyId, String(data));
       });
 
-      ipcRenderer.on(IPC_TERMINAL_CHANNEL, (event, message: any) => {
-        if (message.type === 'data' && message.pid === ptyId) {
-          term.write(String(message.data));
-        } else if (message.type === 'exit' && message.pid === ptyId) {
+      // Set up data listener
+      console.log('[TerminalWidget] Registering data handler');
+      const dataHandler = (pid: number, data: string) => {
+        console.log('[TerminalWidget] Data handler called:', { pid, ptyId, data });
+        if (pid === ptyId) {
+          console.log('[TerminalWidget] Writing data to terminal display');
+          term.write(String(data));
+        } else {
+          console.log('[TerminalWidget] Ignoring data for different pid:', pid);
+        }
+      };
+      terminalApi.onTerminalData(dataHandler);
+
+      // Set up exit listener
+      console.log('[TerminalWidget] Registering exit handler');
+      const exitHandler = (pid: number) => {
+        console.log('[TerminalWidget] Exit handler called:', { pid, ptyId });
+        if (pid === ptyId) {
+          console.log('[TerminalWidget] Terminal process terminated');
           term.writeln('\r\n[Process terminated]');
         }
-      });
+      };
+      terminalApi.onTerminalExit(exitHandler);
+      
+      console.log('[TerminalWidget] All handlers registered');
     })
-    .catch(() => {
+    .catch((error) => {
+      console.error('[TerminalWidget] Failed to create terminal:', error);
       term.writeln('\r\n[Terminal backend unavailable]\r\n');
       term.write('$ ');
     });
@@ -98,15 +136,17 @@ function WidgetComp({id, settings, widgetApi}: WidgetReactComponentProps<Setting
     resizeObserver.observe(terminalRef.current);
 
     return () => {
+      console.log('[TerminalWidget] Cleanup function called');
       resizeObserver.disconnect();
       if (ptyIdRef.current !== null) {
-        (ipcRenderer.invoke as any)(ipcTerminalCloseChannel, ptyIdRef.current);
+        console.log('[TerminalWidget] Closing terminal with ptyId:', ptyIdRef.current);
+        const terminalApi = widgetApi.terminal;
+        terminalApi.closeTerminal(ptyIdRef.current);
       }
-      // Remove specific listener instead of all
-      // ipcRenderer.removeAllListeners(IPC_TERMINAL_CHANNEL);
+      console.log('[TerminalWidget] Disposing xterm instance');
       term.dispose();
     };
-  }, []);
+  }, [widgetApi, id]);
 
   // Update terminal settings when they change
   useEffect(() => {

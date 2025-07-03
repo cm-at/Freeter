@@ -38,33 +38,43 @@ export function createTerminalControllers({
     Controller<IpcTerminalWriteArgs, IpcTerminalWriteRes>,
     Controller<IpcTerminalCloseArgs, IpcTerminalCloseRes>,
   ] {
+  console.log('[TerminalControllers] Creating terminal controllers');
+  
   return [{
     channel: ipcExecCmdLinesInTerminalChannel,
     handle: async (_, cmdLines, cwd) => {
+      console.log('[TerminalControllers] execCmdLinesInTerminal called:', { cmdLines, cwd });
       execCmdLinesInTerminalUseCase(cmdLines, cwd);
     }
   }, {
     channel: ipcTerminalCreateChannel,
     handle: async (event, widgetId, shell, cwd) => {
+      console.log('[TerminalControllers] Terminal create request:', { widgetId, shell, cwd });
       const ptyId = nextPtyId++;
+      console.log('[TerminalControllers] Assigned ptyId:', ptyId);
       
       // Send create message to terminal manager
+      console.log('[TerminalControllers] Emitting create event to terminal manager');
       ipcMain.emit(IPC_TERMINAL_CHANNEL, event, { type: 'create', pid: ptyId });
       
+      console.log('[TerminalControllers] Returning ptyId to renderer:', { ptyId });
       return { ptyId };
     }
   }, {
     channel: ipcTerminalWriteChannel,
     handle: async (event, ptyId, data) => {
+      console.log('[TerminalControllers] Terminal write request:', { ptyId, data: data.substring(0, 50) + '...' });
       // Send data to terminal manager
       ipcMain.emit(IPC_TERMINAL_CHANNEL, event, { type: 'data', payload: data, pid: ptyId });
     }
   }, {
     channel: ipcTerminalCloseChannel,
     handle: async (event, ptyId) => {
+      console.log('[TerminalControllers] Terminal close request:', { ptyId });
       // Send close message to terminal manager
       ipcMain.emit(IPC_TERMINAL_CHANNEL, event, { type: 'close', pid: ptyId });
       terminals.delete(ptyId);
+      console.log('[TerminalControllers] Terminal removed from map. Remaining:', terminals.size);
     }
   }]
 }

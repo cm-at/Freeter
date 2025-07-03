@@ -13,13 +13,20 @@ const wrapperByListener = new WeakMap<IpcRendererListener, ElectronIpcRendererLi
 
 const mainApi: MainApi = {
   electronIpcRenderer: {
-    invoke: electronIpcRenderer.invoke,
+    invoke: (channel: string, ...args: any[]) => {
+      console.log('[Preload] IPC invoke called:', channel, 'args:', args);
+      return electronIpcRenderer.invoke(channel, ...args);
+    },
 
     // Dropping Event in listener for security reason, to make ipcRenderer unaccessible
     on: ((channel: string, listener: IpcRendererListener) => {
-      const wrappedListener: ElectronIpcRendererListener = (_, ...args) => listener(...args);
+      console.log('[Preload] Registering IPC listener for channel:', channel);
+      const wrappedListener: ElectronIpcRendererListener = (_, ...args) => {
+        console.log('[Preload] IPC message received on channel:', channel, 'args:', args);
+        listener(...args);
+      };
       wrapperByListener.set(listener, wrappedListener);
-      return electronIpcRenderer.on(channel, (_, ...args) => listener(...args))
+      return electronIpcRenderer.on(channel, wrappedListener);
     }) as MainApi['electronIpcRenderer']['on'],
 
     // Dropping Event in listener for security reason, to make ipcRenderer unaccessible

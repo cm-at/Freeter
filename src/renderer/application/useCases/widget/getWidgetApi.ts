@@ -42,7 +42,7 @@ function _createWidgetApiFactory({
       } : () => undefined,
     }),
     {
-      clipboard: () => ({
+      clipboard: (widgetId) => ({
         writeBookmark: (title, url) => clipboardProvider.writeBookmark(title, url),
         writeText: (text) => clipboardProvider.writeText(text)
       }),
@@ -58,18 +58,23 @@ function _createWidgetApiFactory({
           getKeys: async () => (await widgetDataStorage).getKeys()
         }
       },
-      process: () => ({
+      process: (widgetId) => ({
         getProcessInfo: () => processProvider.getProcessInfo()
       }),
-      shell: () => ({
+      shell: (widgetId) => ({
         openApp: (appPath, args) => shellProvider.openApp(appPath, args),
         openExternalUrl: (url) => shellProvider.openExternal(url),
         openPath: (path) => shellProvider.openPath(path)
       }),
-      terminal: () => ({
-        execCmdLines: (cmdLines, cwd) => terminalProvider.execCmdLines(cmdLines, cwd)
+      terminal: (widgetId) => ({
+        execCmdLines: (cmdLines, cwd) => terminalProvider.execCmdLines(cmdLines, cwd),
+        createTerminal: (widgetId, shell, cwd) => terminalProvider.createTerminal(widgetId, shell, cwd),
+        writeToTerminal: (ptyId, data) => terminalProvider.writeToTerminal(ptyId, data),
+        closeTerminal: (ptyId) => terminalProvider.closeTerminal(ptyId),
+        onTerminalData: (callback) => terminalProvider.onTerminalData(callback),
+        onTerminalExit: (callback) => terminalProvider.onTerminalExit(callback)
       }),
-      widgets: () => ({
+      widgets: (widgetId) => ({
         getWidgetsInCurrentWorkflow: (widgetTypeId) => getWidgetsInCurrentWorkflowUseCase(widgetTypeId)
       })
     }
@@ -88,9 +93,12 @@ export function createGetWidgetApiUseCase(deps: Deps) {
     exposeApiHandler: WidgetApiExposeApiHandler,
     requiredModules: WidgetApiModuleName[]
   ) {
-    return forPreview
+    console.log('[GetWidgetApi] Creating widget API:', { widgetId, forPreview, requiredModules });
+    const api = forPreview
       ? widgetApiPreviewFactory(widgetId, updateActionBarHandler, setContextMenuFactoryHandler, exposeApiHandler, requiredModules)
       : widgetApiFactory(widgetId, updateActionBarHandler, setContextMenuFactoryHandler, exposeApiHandler, requiredModules);
+    console.log('[GetWidgetApi] Widget API created:', { widgetId, apiKeys: Object.keys(api) });
+    return api;
   }
 
   return getWidgetApiUseCase;

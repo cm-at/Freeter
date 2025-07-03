@@ -614,7 +614,7 @@ function createUI(stateHooks: ReturnType<typeof createUiHooks>, useCases: Awaite
     ProjectSwitcher,
     ManageProjectsButton,
     Shelf,
-    Palette,
+    Palette: Palette as React.FC<PaletteProps>,
     useTopBarViewModel
   });
 

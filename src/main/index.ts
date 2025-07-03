@@ -246,7 +246,9 @@ if (!app.requestSingleInstanceLock()) {
       });
 
       initTrayUseCase(appWindow);
+      console.log('[Main] Initializing terminal manager');
       initTerminalManager();
+      console.log('[Main] Terminal manager initialized');
     })
   });
 
