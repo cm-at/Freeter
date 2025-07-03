@@ -5,7 +5,7 @@
 
 import { debounce } from '@/widgets/helpers';
 import { ActionBar, ActionBarItems, ReactComponent, WidgetReactComponentProps, delete14Svg, moveItemInList } from '@/widgets/appModules';
-import * as styles from './widget.module.scss';
+import styles from './widget.module.scss';
 import { Settings } from './settings';
 import { DragEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createContextMenuFactory } from '@/widgets/to-do-list/contextMenu';

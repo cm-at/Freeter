@@ -9,7 +9,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import 'xterm/css/xterm.css';
-import * as styles from './widget.module.scss';
+import styles from './widget.module.scss';
 import { electronIpcRenderer as ipcRenderer } from '@/infra/mainApi/mainApi';
 import { ipcTerminalCloseChannel, ipcTerminalCreateChannel, ipcTerminalWriteChannel, IPC_TERMINAL_CHANNEL } from '@common/ipc/channels';
 

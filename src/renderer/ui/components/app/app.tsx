@@ -3,11 +3,11 @@
  * GNU General Public License v3.0 or later (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
  */
 
-// import * as styles from './app.module.scss';
+// import styles from './app.module.scss';
 import { AppViewModelHook } from './appViewModel';
 import './globals.scss';
 import React from 'react';
-import * as styles from './app.module.scss';
+import styles from './app.module.scss';
 import {SvgIcon} from '@/ui/components/basic/svgIcon';
 import { manage24Svg } from '@/ui/assets/images/appIcons';
 import { InAppNote } from '@/ui/components/basic/inAppNote';
@@ -27,10 +27,6 @@ export function createAppComponent({
   useAppViewModel
 }: Deps) {
   function App() {
-    console.log('CSS Module styles:', styles);
-    console.log('Type:', typeof styles);
-    console.log('Keys:', Object.keys(styles));
-    console.log('Has main-screen?', 'main-screen' in styles);
     const {modalScreens, hasModalScreens, hasProjects, contextMenuHandler, uiThemeId, hasTopBar} = useAppViewModel();
     return (
       <div onContextMenu={contextMenuHandler}>

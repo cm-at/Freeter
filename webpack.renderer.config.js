@@ -88,13 +88,9 @@ module.exports = {
           {
             loader: 'css-loader',
             options: {
-              modules: {
-                localIdentName: isDev ? '[path][name]__[local]--[hash:base64:5]' : '[hash:base64:8]',
-                exportLocalsConvention: 'asIs'
-              },
+              modules: true,
               sourceMap: true,
-              importLoaders: 1,
-              esModule: false
+              importLoaders: 1
             },
           },
           'sass-loader',

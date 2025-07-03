@@ -5,7 +5,7 @@
 
 import { Button, ReactComponent, WidgetReactComponentProps } from '@/widgets/appModules';
 import { Settings, SettingsMode, defaultEngine, enginesById } from './settings';
-import * as styles from './widget.module.scss';
+import styles from './widget.module.scss';
 import { FormEvent, useMemo, useState } from 'react';
 import { querySvg } from '@/widgets/web-query/icons';
 import { sanitizeUrl } from '@common/helpers/sanitizeUrl';
