@@ -11,7 +11,7 @@ import { FitAddon } from 'xterm-addon-fit';
 import 'xterm/css/xterm.css';
 import * as styles from './widget.module.scss';
 import { electronIpcRenderer as ipcRenderer } from '@/infra/mainApi/mainApi';
-import { ipcTerminalCloseChannel, ipcTerminalCreateChannel, ipcTerminalOnDataChannel, ipcTerminalWriteChannel } from '@common/ipc/channels';
+import { ipcTerminalCloseChannel, ipcTerminalCreateChannel, ipcTerminalWriteChannel, IPC_TERMINAL_CHANNEL } from '@common/ipc/channels';
 
 const darkTheme = {
   background: '#1e1e1e',
@@ -76,12 +76,14 @@ function WidgetComp({id, settings, widgetApi}: WidgetReactComponentProps<Setting
     .then(({ ptyId }: any) => {
       ptyIdRef.current = ptyId;
       term.onData(data => {
-        ipcRenderer.send(ipcTerminalWriteChannel, ptyId, String(data));
+        (ipcRenderer.invoke as any)(ipcTerminalWriteChannel, ptyId, String(data));
       });
 
-      ipcRenderer.on(ipcTerminalOnDataChannel, (event, incomingPtyId, data) => {
-        if (incomingPtyId === ptyId) {
-          term.write(String(data));
+      ipcRenderer.on(IPC_TERMINAL_CHANNEL, (event, message: any) => {
+        if (message.type === 'data' && message.pid === ptyId) {
+          term.write(String(message.data));
+        } else if (message.type === 'exit' && message.pid === ptyId) {
+          term.writeln('\r\n[Process terminated]');
         }
       });
     })
@@ -98,8 +100,10 @@ function WidgetComp({id, settings, widgetApi}: WidgetReactComponentProps<Setting
     return () => {
       resizeObserver.disconnect();
       if (ptyIdRef.current !== null) {
-        ipcRenderer.send(ipcTerminalCloseChannel, ptyIdRef.current);
+        (ipcRenderer.invoke as any)(ipcTerminalCloseChannel, ptyIdRef.current);
       }
+      // Remove specific listener instead of all
+      // ipcRenderer.removeAllListeners(IPC_TERMINAL_CHANNEL);
       term.dispose();
     };
   }, []);

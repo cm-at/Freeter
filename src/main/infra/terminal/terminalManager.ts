@@ -81,11 +81,24 @@ class TerminalManager {
         const disposables: (() => void)[] = [];
 
         term.onData((data: string) => {
-            sender.send(IPC_TERMINAL_CHANNEL, { type: 'data', data, pid });
+            try {
+                if (!sender.isDestroyed()) {
+                    sender.send(IPC_TERMINAL_CHANNEL, { type: 'data', data, pid });
+                }
+            } catch (error) {
+                console.error('Error sending terminal data:', error);
+                this.close(pid);
+            }
         });
 
         term.onExit(() => {
-            sender.send(IPC_TERMINAL_CHANNEL, { type: 'exit', pid });
+            try {
+                if (!sender.isDestroyed()) {
+                    sender.send(IPC_TERMINAL_CHANNEL, { type: 'exit', pid });
+                }
+            } catch (error) {
+                console.error('Error sending terminal exit:', error);
+            }
             this.close(pid);
         });
 

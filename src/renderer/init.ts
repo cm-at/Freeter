@@ -15,7 +15,7 @@ import { createDropOnWorktableLayoutUseCase } from '@/application/useCases/dragD
 import { createResizeLayoutItemUseCase, createResizeLayoutItemEndUseCase, createResizeLayoutItemStartUseCase } from '@/application/useCases/worktable/resizeLayoutItem';
 import { uuidv4IdGenerator } from '@/infra/idGenerator/uuidv4IdGenerator';
 import { createAppComponent } from '@/ui/components/app';
-import { createPaletteComponent } from '@/ui/components/palette';
+import { createPaletteComponent, PaletteProps } from '@/ui/components/palette';
 import { createPaletteViewModelHook } from '@/ui/components/palette/paletteViewModel';
 import { createTopBarComponent } from '@/ui/components/topBar';
 import { createShelfComponent, createShelfItemComponent } from '@/ui/components/topBar/shelf';
@@ -634,7 +634,7 @@ function createUI(stateHooks: ReturnType<typeof createUiHooks>, useCases: Awaite
     useWorkflowSwitcherViewModel,
     EditModeToggle,
     ManageProjectsButton,
-    Palette,
+    Palette: Palette as React.FC<PaletteProps>,
     ProjectSwitcher,
   })
   const useWorktableViewModel = createWorktableViewModelHook(deps);
