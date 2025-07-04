@@ -69,7 +69,6 @@ import { createChildProcessProvider } from '@/infra/childProcessProvider/childPr
 import { createOpenPathUseCase } from '@/application/useCases/shell/openPath';
 import { createCopyWidgetDataStorageUseCase } from '@/application/useCases/widgetDataStorage/copyWidgetDataStorage';
 import { createOpenAppUseCase } from '@/application/useCases/shell/openApp';
-import { initTerminalManager } from '@/infra/terminal/terminalManager';
 
 let appWindow: BrowserWindow | null = null; // ref to the app window
 
@@ -246,9 +245,6 @@ if (!app.requestSingleInstanceLock()) {
       });
 
       initTrayUseCase(appWindow);
-      console.log('[Main] Initializing terminal manager');
-      initTerminalManager();
-      console.log('[Main] Terminal manager initialized');
     })
   });
 

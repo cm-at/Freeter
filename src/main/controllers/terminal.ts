@@ -20,15 +20,26 @@ import {
   IPC_TERMINAL_CHANNEL
 } from '@common/ipc/channels';
 import { ExecCmdLinesInTerminalUseCase } from '@/application/useCases/terminal/execCmdLinesInTerminal';
-import { ipcMain } from 'electron';
+import { TerminalManager } from '@/infra/terminal/terminalManager';
+import { ipcMain, BrowserWindow } from 'electron';
 
 type Deps = {
   execCmdLinesInTerminalUseCase: ExecCmdLinesInTerminalUseCase;
 }
 
-// Store for active terminals
-const terminals = new Map<number, any>();
-let nextPtyId = 1;
+// Create a single terminal manager instance
+const terminalManager = new TerminalManager();
+
+// Set up IPC channel forwarding to renderer windows
+ipcMain.on(IPC_TERMINAL_CHANNEL, (event: any, message: any) => {
+  console.log('[TerminalControllers] Forwarding terminal message to all windows:', message);
+  // Forward to all windows
+  BrowserWindow.getAllWindows().forEach(window => {
+    if (!window.isDestroyed()) {
+      window.webContents.send(IPC_TERMINAL_CHANNEL, message);
+    }
+  });
+});
 
 export function createTerminalControllers({
   execCmdLinesInTerminalUseCase,
@@ -50,31 +61,30 @@ export function createTerminalControllers({
     channel: ipcTerminalCreateChannel,
     handle: async (event, widgetId, shell, cwd) => {
       console.log('[TerminalControllers] Terminal create request:', { widgetId, shell, cwd });
-      const ptyId = nextPtyId++;
-      console.log('[TerminalControllers] Assigned ptyId:', ptyId);
       
-      // Send create message to terminal manager
-      console.log('[TerminalControllers] Emitting create event to terminal manager');
-      ipcMain.emit(IPC_TERMINAL_CHANNEL, event, { type: 'create', pid: ptyId });
+      // Create terminal using the terminal manager
+      const ptyId = terminalManager.createTerminal(shell, cwd);
       
-      console.log('[TerminalControllers] Returning ptyId to renderer:', { ptyId });
+      console.log('[TerminalControllers] Terminal created with ptyId:', ptyId);
       return { ptyId };
     }
   }, {
     channel: ipcTerminalWriteChannel,
     handle: async (event, ptyId, data) => {
       console.log('[TerminalControllers] Terminal write request:', { ptyId, data: data.substring(0, 50) + '...' });
-      // Send data to terminal manager
-      ipcMain.emit(IPC_TERMINAL_CHANNEL, event, { type: 'data', payload: data, pid: ptyId });
+      
+      // Write to terminal using the terminal manager
+      terminalManager.writeToTerminal(ptyId, data);
     }
   }, {
     channel: ipcTerminalCloseChannel,
     handle: async (event, ptyId) => {
       console.log('[TerminalControllers] Terminal close request:', { ptyId });
-      // Send close message to terminal manager
-      ipcMain.emit(IPC_TERMINAL_CHANNEL, event, { type: 'close', pid: ptyId });
-      terminals.delete(ptyId);
-      console.log('[TerminalControllers] Terminal removed from map. Remaining:', terminals.size);
+      
+      // Close terminal using the terminal manager
+      terminalManager.closeTerminal(ptyId);
+      
+      console.log('[TerminalControllers] Terminal closed');
     }
   }]
 }

@@ -1,7 +1,64 @@
+/*
+ * Copyright: (c) 2024, Alex Kaul
+ * GNU General Public License v3.0 or later (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+ */
+
 import { ipcMain } from 'electron';
 import { IPC_TERMINAL_CHANNEL } from '../../../common/ipc/channels';
 import os from 'os';
 import * as pty from 'node-pty';
+import { execSync } from 'child_process';
+
+/**
+ * Get the user's shell environment variables
+ */
+function getShellEnv(): NodeJS.ProcessEnv {
+  try {
+    // Get the user's default shell
+    const userShell = process.env.SHELL || '/bin/zsh';
+    
+    // Execute a login shell to get the full environment
+    const envOutput = execSync(`${userShell} -l -c 'env'`, {
+      encoding: 'utf8',
+      timeout: 5000
+    });
+    
+    const env: NodeJS.ProcessEnv = {};
+    
+    // Parse the environment output
+    envOutput.split('\n').forEach(line => {
+      const [key, ...valueParts] = line.split('=');
+      if (key) {
+        env[key] = valueParts.join('=');
+      }
+    });
+    
+    // Merge with current process env, but prefer shell env for PATH
+    return {
+      ...process.env,
+      ...env,
+      // Ensure PATH from shell takes precedence
+      PATH: env.PATH || process.env.PATH,
+      // Ensure LANG is set for proper unicode support
+      LANG: env.LANG || process.env.LANG || 'en_US.UTF-8'
+    };
+  } catch (error) {
+    console.error('[TerminalManager] Failed to get shell environment:', error);
+    // Fallback to process env with common paths added
+    const commonPaths = [
+      '/usr/local/bin',
+      '/opt/homebrew/bin',
+      '/opt/homebrew/sbin',
+      process.env.PATH
+    ].filter(Boolean).join(':');
+    
+    return {
+      ...process.env,
+      PATH: commonPaths,
+      LANG: process.env.LANG || 'en_US.UTF-8'
+    };
+  }
+}
 
 /**
  * Wraps a node-pty instance so the rest of the app keeps the same API it used for the mock.
@@ -17,30 +74,31 @@ class NodePtyTerminal {
     const rows = 24;
     console.log(`[NodePtyTerminal] Creating real terminal with shell: ${shell}, cwd: ${cwd || 'default'}`);
     
+    // Get the full shell environment
+    const shellEnv = getShellEnv();
+    
     this.term = pty.spawn(shell, [], {
       cols,
       rows,
       cwd: cwd || os.homedir(),
-      env: Object.fromEntries(Object.entries(process.env).filter(([, v]) => v !== undefined)) as { [key: string]: string },
+      env: shellEnv as { [key: string]: string },
     });
     this.pid = this.term.pid;
   }
 
   onData(callback: (data: string) => void): void {
-    // Dispose of any existing listener
+    // Dispose of previous listener if it exists
     if (this.dataDisposable) {
       this.dataDisposable.dispose();
     }
-    // Set up new listener
     this.dataDisposable = this.term.onData(callback);
   }
 
   onExit(callback: () => void): void {
-    // Dispose of any existing listener
+    // Dispose of previous listener if it exists
     if (this.exitDisposable) {
       this.exitDisposable.dispose();
     }
-    // Set up new listener
     this.exitDisposable = this.term.onExit(() => callback());
   }
 
@@ -53,7 +111,7 @@ class NodePtyTerminal {
   }
 
   kill(): void {
-    // Dispose of listeners
+    // Clean up event listeners
     if (this.dataDisposable) {
       this.dataDisposable.dispose();
       this.dataDisposable = null;
@@ -62,118 +120,72 @@ class NodePtyTerminal {
       this.exitDisposable.dispose();
       this.exitDisposable = null;
     }
-    // Kill the terminal
     this.term.kill();
   }
 }
 
-class TerminalManager {
-    private terminals: Map<number, NodePtyTerminal> = new Map();
-    private disposables: Map<number, (() => void)[]> = new Map();
+export class TerminalManager {
+  private terminals: Map<number, NodePtyTerminal> = new Map();
+  private nextId = 1;
 
-    constructor() {
-        console.log('[TerminalManager] Initializing terminal manager');
-        console.log('[TerminalManager] Registering IPC listener on channel:', IPC_TERMINAL_CHANNEL);
-        ipcMain.on(IPC_TERMINAL_CHANNEL, this.onMessage.bind(this));
-        console.log('[TerminalManager] IPC listener registered successfully');
+  constructor() {
+    console.log('[TerminalManager] Initializing TerminalManager');
+  }
+
+  createTerminal(shell?: string, cwd?: string): number {
+    const id = this.nextId++;
+    const defaultShell = process.platform === 'win32' ? 'cmd.exe' : (process.env.SHELL || '/bin/bash');
+    const terminalShell = shell || defaultShell;
+    
+    console.log(`[TerminalManager] Creating terminal ${id} with shell: ${terminalShell}`);
+    const terminal = new NodePtyTerminal(terminalShell, cwd);
+    
+    terminal.onData((data) => {
+      console.log(`[TerminalManager] Terminal ${id} data:`, data);
+      // Send data to all renderer windows
+      ipcMain.emit(IPC_TERMINAL_CHANNEL, {
+        type: 'data',
+        pid: terminal.pid,
+        data: data
+      });
+    });
+
+    terminal.onExit(() => {
+      console.log(`[TerminalManager] Terminal ${id} exited`);
+      this.terminals.delete(id);
+      // Send exit event to all renderer windows
+      ipcMain.emit(IPC_TERMINAL_CHANNEL, {
+        type: 'exit',
+        pid: terminal.pid
+      });
+    });
+
+    this.terminals.set(id, terminal);
+    return terminal.pid;
+  }
+
+  writeToTerminal(ptyId: number, data: string): void {
+    console.log(`[TerminalManager] Writing to terminal ${ptyId}:`, data);
+    // Find terminal by pid
+    for (const [id, terminal] of this.terminals) {
+      if (terminal.pid === ptyId) {
+        terminal.write(data);
+        return;
+      }
     }
+    console.warn(`[TerminalManager] Terminal with ptyId ${ptyId} not found`);
+  }
 
-    private onMessage(event: Electron.IpcMainEvent, { type, payload, pid, shell, cwd }: { type: string, payload?: any, pid: number, shell?: string, cwd?: string }) {
-        console.log('[TerminalManager] Received IPC message:', { type, pid, payloadLength: payload?.length });
-        
-        switch (type) {
-            case 'create':
-                console.log('[TerminalManager] Creating terminal with pid:', pid);
-                this.create(pid, shell, cwd, event.sender);
-                break;
-            case 'data':
-                console.log('[TerminalManager] Writing data to terminal:', pid, 'data:', payload);
-                this.terminals.get(pid)?.write(payload);
-                break;
-            case 'resize':
-                console.log('[TerminalManager] Resizing terminal:', pid, payload);
-                this.terminals.get(pid)?.resize(payload.cols, payload.rows);
-                break;
-            case 'close':
-                console.log('[TerminalManager] Closing terminal:', pid);
-                this.close(pid);
-                break;
-            default:
-                console.warn('[TerminalManager] Unknown message type:', type);
-        }
+  closeTerminal(ptyId: number): void {
+    console.log(`[TerminalManager] Closing terminal ${ptyId}`);
+    // Find terminal by pid
+    for (const [id, terminal] of this.terminals) {
+      if (terminal.pid === ptyId) {
+        terminal.kill();
+        this.terminals.delete(id);
+        return;
+      }
     }
-
-    private create(pid: number, shell: string | undefined, cwd: string | undefined, sender: Electron.WebContents) {
-        const defaultShell = process.platform === 'win32'
-          ? process.env.COMSPEC || 'cmd.exe'
-          : shell || process.env.SHELL || 'bash';
-
-        console.log('[TerminalManager] Spawning PTY:', { pid, shell: defaultShell, cwd });
-
-        const term = new NodePtyTerminal(defaultShell, cwd);
-        this.terminals.set(pid, term as any);
-        console.log('[TerminalManager] Terminal created and stored in map. Total terminals:', this.terminals.size);
-
-        const disposables: (() => void)[] = [];
-
-        term.onData((data: string) => {
-            console.log('[TerminalManager] Terminal data callback triggered for pid:', pid, 'data:', data.substring(0, 80));
-            try {
-                if (!sender.isDestroyed()) {
-                    console.log('[TerminalManager] Sending data to renderer via IPC');
-                    sender.send(IPC_TERMINAL_CHANNEL, { type: 'data', data, pid });
-                } else {
-                    console.warn('[TerminalManager] Sender is destroyed, cannot send data');
-                }
-            } catch (error) {
-                console.error('[TerminalManager] Error sending terminal data:', error);
-                this.close(pid);
-            }
-        });
-
-        term.onExit(() => {
-            console.log('[TerminalManager] Terminal exit callback triggered for pid:', pid);
-            try {
-                if (!sender.isDestroyed()) {
-                    console.log('[TerminalManager] Sending exit event to renderer');
-                    sender.send(IPC_TERMINAL_CHANNEL, { type: 'exit', pid });
-                } else {
-                    console.warn('[TerminalManager] Sender is destroyed, cannot send exit');
-                }
-            } catch (error) {
-                console.error('[TerminalManager] Error sending terminal exit:', error);
-            }
-            this.close(pid);
-        });
-
-        this.disposables.set(pid, disposables);
-        console.log('[TerminalManager] Terminal setup complete for pid:', pid);
-    }
-
-    private close(pid: number) {
-        console.log('[TerminalManager] Closing terminal:', pid);
-        const terminal = this.terminals.get(pid);
-        if (terminal) {
-            console.log('[TerminalManager] Killing terminal process');
-            terminal.kill();
-            this.terminals.delete(pid);
-        } else {
-            console.warn('[TerminalManager] Terminal not found:', pid);
-        }
-        
-        const disposables = this.disposables.get(pid);
-        if (disposables) {
-            console.log('[TerminalManager] Cleaning up disposables:', disposables.length);
-            disposables.forEach(dispose => dispose());
-            this.disposables.delete(pid);
-        }
-        
-        console.log('[TerminalManager] Terminal closed. Remaining terminals:', this.terminals.size);
-    }
-}
-
-export function initTerminalManager(): void {
-    console.log('[TerminalManager] initTerminalManager called');
-    new TerminalManager();
-    console.log('[TerminalManager] Terminal manager initialized');
+    console.warn(`[TerminalManager] Terminal with ptyId ${ptyId} not found`);
+  }
 } 
