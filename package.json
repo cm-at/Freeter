@@ -76,6 +76,7 @@
     "html-webpack-plugin": "^5.6.0",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
+    "node-loader": "^2.1.0",
     "nodemon": "^3.0.3",
     "react": "^18.2.0",
     "react-devtools": "^5.0.0",
@@ -98,6 +99,7 @@
   },
   "dependencies": {
     "clsx": "^2.1.0",
+    "node-pty": "https://github.com/microsoft/node-pty.git",
     "uuid": "^9.0.1",
     "xterm": "^5.3.0",
     "xterm-addon-fit": "^0.8.0",

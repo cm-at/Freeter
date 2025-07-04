@@ -1,75 +1,74 @@
 import { ipcMain } from 'electron';
 import { IPC_TERMINAL_CHANNEL } from '../../../common/ipc/channels';
+import os from 'os';
+import * as pty from 'node-pty';
 
-// Mock IPty interface for now
-interface MockIPty {
-    pid: number;
-    onData: (callback: (data: string) => void) => void;
-    onExit: (callback: () => void) => void;
-    write: (data: string) => void;
-    resize: (cols: number, rows: number) => void;
-    kill: () => void;
-}
+/**
+ * Wraps a node-pty instance so the rest of the app keeps the same API it used for the mock.
+ */
+class NodePtyTerminal {
+  pid: number;
+  private term: pty.IPty;
+  private dataDisposable: pty.IDisposable | null = null;
+  private exitDisposable: pty.IDisposable | null = null;
 
-class MockTerminal implements MockIPty {
-    pid: number;
-    private dataCallbacks: ((data: string) => void)[] = [];
-    private exitCallbacks: (() => void)[] = [];
+  constructor(shell: string, cwd: string | undefined) {
+    const cols = 80;
+    const rows = 24;
+    console.log(`[NodePtyTerminal] Creating real terminal with shell: ${shell}, cwd: ${cwd || 'default'}`);
+    
+    this.term = pty.spawn(shell, [], {
+      cols,
+      rows,
+      cwd: cwd || os.homedir(),
+      env: Object.fromEntries(Object.entries(process.env).filter(([, v]) => v !== undefined)) as { [key: string]: string },
+    });
+    this.pid = this.term.pid;
+  }
 
-    constructor(pid: number) {
-        this.pid = pid;
-        console.log(`[MockTerminal] Creating mock terminal with pid: ${pid}`);
-        // Simulate a simple echo terminal
-        setTimeout(() => {
-            console.log(`[MockTerminal] Sending initial prompt for pid: ${pid}`);
-            const initialPrompt = 'Mock Terminal Ready\r\n$ ';
-            console.log(`[MockTerminal] Data callbacks count: ${this.dataCallbacks.length}`);
-            this.dataCallbacks.forEach(cb => {
-                console.log(`[MockTerminal] Calling data callback with initial prompt`);
-                cb(initialPrompt);
-            });
-        }, 100);
+  onData(callback: (data: string) => void): void {
+    // Dispose of any existing listener
+    if (this.dataDisposable) {
+      this.dataDisposable.dispose();
     }
+    // Set up new listener
+    this.dataDisposable = this.term.onData(callback);
+  }
 
-    onData(callback: (data: string) => void): void {
-        console.log(`[MockTerminal] Registering onData callback for pid: ${this.pid}`);
-        this.dataCallbacks.push(callback);
-        console.log(`[MockTerminal] Total data callbacks: ${this.dataCallbacks.length}`);
+  onExit(callback: () => void): void {
+    // Dispose of any existing listener
+    if (this.exitDisposable) {
+      this.exitDisposable.dispose();
     }
+    // Set up new listener
+    this.exitDisposable = this.term.onExit(() => callback());
+  }
 
-    onExit(callback: () => void): void {
-        console.log(`[MockTerminal] Registering onExit callback for pid: ${this.pid}`);
-        this.exitCallbacks.push(callback);
-    }
+  write(data: string): void {
+    this.term.write(data);
+  }
 
-    write(data: string): void {
-        console.log(`[MockTerminal] Write called for pid: ${this.pid}, data: "${data}", data length: ${data.length}`);
-        // Echo back the input
-        this.dataCallbacks.forEach((cb, index) => {
-            console.log(`[MockTerminal] Calling data callback ${index} with echo`);
-            cb(data);
-        });
-        if (data === '\r') {
-            console.log(`[MockTerminal] Detected carriage return, sending new prompt`);
-            this.dataCallbacks.forEach(cb => cb('\r\n$ '));
-        }
-    }
+  resize(cols: number, rows: number): void {
+    this.term.resize(cols, rows);
+  }
 
-    resize(cols: number, rows: number): void {
-        console.log(`[MockTerminal] Terminal ${this.pid} resized to ${cols}x${rows}`);
+  kill(): void {
+    // Dispose of listeners
+    if (this.dataDisposable) {
+      this.dataDisposable.dispose();
+      this.dataDisposable = null;
     }
-
-    kill(): void {
-        console.log(`[MockTerminal] Kill called for pid: ${this.pid}`);
-        this.exitCallbacks.forEach((cb, index) => {
-            console.log(`[MockTerminal] Calling exit callback ${index}`);
-            cb();
-        });
+    if (this.exitDisposable) {
+      this.exitDisposable.dispose();
+      this.exitDisposable = null;
     }
+    // Kill the terminal
+    this.term.kill();
+  }
 }
 
 class TerminalManager {
-    private terminals: Map<number, MockTerminal> = new Map();
+    private terminals: Map<number, NodePtyTerminal> = new Map();
     private disposables: Map<number, (() => void)[]> = new Map();
 
     constructor() {
@@ -79,13 +78,13 @@ class TerminalManager {
         console.log('[TerminalManager] IPC listener registered successfully');
     }
 
-    private onMessage(event: Electron.IpcMainEvent, { type, payload, pid }: { type: string, payload?: any, pid: number }) {
+    private onMessage(event: Electron.IpcMainEvent, { type, payload, pid, shell, cwd }: { type: string, payload?: any, pid: number, shell?: string, cwd?: string }) {
         console.log('[TerminalManager] Received IPC message:', { type, pid, payloadLength: payload?.length });
         
         switch (type) {
             case 'create':
                 console.log('[TerminalManager] Creating terminal with pid:', pid);
-                this.create(pid, event.sender);
+                this.create(pid, shell, cwd, event.sender);
                 break;
             case 'data':
                 console.log('[TerminalManager] Writing data to terminal:', pid, 'data:', payload);
@@ -104,16 +103,21 @@ class TerminalManager {
         }
     }
 
-    private create(pid: number, sender: Electron.WebContents) {
-        console.log('[TerminalManager] Creating mock terminal instance for pid:', pid);
-        const term = new MockTerminal(pid);
-        this.terminals.set(pid, term);
+    private create(pid: number, shell: string | undefined, cwd: string | undefined, sender: Electron.WebContents) {
+        const defaultShell = process.platform === 'win32'
+          ? process.env.COMSPEC || 'cmd.exe'
+          : shell || process.env.SHELL || 'bash';
+
+        console.log('[TerminalManager] Spawning PTY:', { pid, shell: defaultShell, cwd });
+
+        const term = new NodePtyTerminal(defaultShell, cwd);
+        this.terminals.set(pid, term as any);
         console.log('[TerminalManager] Terminal created and stored in map. Total terminals:', this.terminals.size);
 
         const disposables: (() => void)[] = [];
 
         term.onData((data: string) => {
-            console.log('[TerminalManager] Terminal data callback triggered for pid:', pid, 'data:', data);
+            console.log('[TerminalManager] Terminal data callback triggered for pid:', pid, 'data:', data.substring(0, 80));
             try {
                 if (!sender.isDestroyed()) {
                     console.log('[TerminalManager] Sending data to renderer via IPC');

@@ -34,6 +34,10 @@ module.exports = {
     ],
   },
   target: 'electron-main',
+  entry: './src/main/index.ts',
+  externals: {
+    'node-pty': 'commonjs node-pty'
+  },
   module: {
     rules: [
       {
@@ -53,7 +57,7 @@ module.exports = {
       },
       {
         test: /\.node$/,
-        type: 'asset/resource',
+        use: 'node-loader',
       },
     ]
   },
