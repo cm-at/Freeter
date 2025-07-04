@@ -33,8 +33,11 @@ function getShellEnv(): NodeJS.ProcessEnv {
       }
     });
     
+    // Remove PREFIX which conflicts with nvm
+    delete env.PREFIX;
+    
     // Merge with current process env, but prefer shell env for PATH
-    return {
+    const mergedEnv: NodeJS.ProcessEnv = {
       ...process.env,
       ...env,
       // Ensure PATH from shell takes precedence
@@ -42,6 +45,13 @@ function getShellEnv(): NodeJS.ProcessEnv {
       // Ensure LANG is set for proper unicode support
       LANG: env.LANG || process.env.LANG || 'en_US.UTF-8'
     };
+    
+    // Remove PREFIX from merged environment if it exists
+    if ('PREFIX' in mergedEnv) {
+      delete mergedEnv.PREFIX;
+    }
+    
+    return mergedEnv;
   } catch (error) {
     console.error('[TerminalManager] Failed to get shell environment:', error);
     // Fallback to process env with common paths added
@@ -52,8 +62,12 @@ function getShellEnv(): NodeJS.ProcessEnv {
       process.env.PATH
     ].filter(Boolean).join(':');
     
+    // Remove PREFIX in fallback too
+    const fallbackEnv = { ...process.env };
+    delete fallbackEnv.PREFIX;
+    
     return {
-      ...process.env,
+      ...fallbackEnv,
       PATH: commonPaths,
       LANG: process.env.LANG || 'en_US.UTF-8'
     };
@@ -142,21 +156,26 @@ export class TerminalManager {
     
     terminal.onData((data) => {
       console.log(`[TerminalManager] Terminal ${id} data:`, data);
-      // Send data to all renderer windows
-      ipcMain.emit(IPC_TERMINAL_CHANNEL, {
-        type: 'data',
-        pid: terminal.pid,
-        data: data
+      // Send data to all renderer windows via IPC event
+      // The terminal controller will forward this to renderer windows
+      process.nextTick(() => {
+        ipcMain.emit(IPC_TERMINAL_CHANNEL, null, {
+          type: 'data',
+          pid: terminal.pid,
+          data: data
+        });
       });
     });
 
     terminal.onExit(() => {
       console.log(`[TerminalManager] Terminal ${id} exited`);
       this.terminals.delete(id);
-      // Send exit event to all renderer windows
-      ipcMain.emit(IPC_TERMINAL_CHANNEL, {
-        type: 'exit',
-        pid: terminal.pid
+      // Send exit event to all renderer windows via IPC event
+      process.nextTick(() => {
+        ipcMain.emit(IPC_TERMINAL_CHANNEL, null, {
+          type: 'exit',
+          pid: terminal.pid
+        });
       });
     });
 
