@@ -23,6 +23,8 @@
     "prod:main": "cross-env NODE_ENV=production webpack --config webpack.main.config.js",
     "prod:run": "electron ./build/main.js",
     "package": "electron-builder --config electron-builder.config.js",
+    "build:dev": "yarn run prod && electron-builder --config electron-builder-dev.config.js --mac dir",
+    "install:dev": "yarn run build:dev && rm -rf /Applications/Freeter\\ Dev.app && cp -R dist/mac*/Freeter\\ Dev.app /Applications/",
     "test": "jest",
     "test:coverage": "jest --coverage",
     "test:watch": "jest --clearCache && cross-env JEST_HIDE_USAGE=1 jest --watch",

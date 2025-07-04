@@ -11,6 +11,7 @@ export interface Settings {
   fontSize: number;
   fontFamily: string;
   theme: 'dark' | 'light';
+  autoStartCommand: string;
 }
 
 export function createSettingsState(): Settings {
@@ -19,7 +20,8 @@ export function createSettingsState(): Settings {
     cwd: '',
     fontSize: 14,
     fontFamily: 'monospace',
-    theme: 'dark'
+    theme: 'dark',
+    autoStartCommand: ''
   }
 }
 
@@ -44,6 +46,15 @@ function SettingsEditorComp({settings, settingsApi}: SettingsEditorReactComponen
           value={settings.cwd}
           onChange={e => updateSettings({ ...settings, cwd: e.target.value })}
           placeholder="Leave empty for default directory"
+        />
+      </SettingRow>
+      <SettingRow>
+        <label>Auto Start Command:</label>
+        <input
+          type="text"
+          value={settings.autoStartCommand}
+          onChange={e => updateSettings({ ...settings, autoStartCommand: e.target.value })}
+          placeholder="Command to run on startup (optional)"
         />
       </SettingRow>
       <SettingRow>

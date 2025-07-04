@@ -123,6 +123,15 @@ function WidgetComp({id, settings, widgetApi}: WidgetReactComponentProps<Setting
       terminalApi.onTerminalExit(exitHandler);
       
       console.log('[TerminalWidget] All handlers registered');
+      
+      // Execute auto start command if configured
+      if (settings.autoStartCommand && settings.autoStartCommand.trim()) {
+        console.log('[TerminalWidget] Executing auto start command:', settings.autoStartCommand);
+        // Add a small delay to ensure terminal is fully initialized
+        setTimeout(() => {
+          terminalApi.writeToTerminal(ptyId, settings.autoStartCommand.trim() + '\n');
+        }, 100);
+      }
     })
     .catch((error) => {
       console.error('[TerminalWidget] Failed to create terminal:', error);
@@ -146,7 +155,7 @@ function WidgetComp({id, settings, widgetApi}: WidgetReactComponentProps<Setting
       console.log('[TerminalWidget] Disposing xterm instance');
       term.dispose();
     };
-  }, [widgetApi, id]);
+  }, [widgetApi, id, settings.shell, settings.cwd, settings.autoStartCommand]);
 
   // Update terminal settings when they change
   useEffect(() => {
