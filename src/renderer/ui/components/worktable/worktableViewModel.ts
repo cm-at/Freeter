@@ -20,8 +20,10 @@ export function createWorktableViewModelHook({
     const {
       isEditMode,
       currentWorkflowId,
+      currentProjectId,
       workflows,
       _activeWorkflows,
+      _loadedWorkflows,
       resizingItem,
       dndDraggingFrom,
       dndDraggingWidgetType,
@@ -35,6 +37,7 @@ export function createWorktableViewModelHook({
       const currentWorkflowId = state.entities.projects[currentProjectId]?.currentWorkflowId;
       const workflows = state.entities.workflows;
       const _activeWorkflows = state.ui.memSaver.activeWorkflows;
+      const _loadedWorkflows = state.ui.memSaver.loadedWorkflows;
       const { resizingItem } = state.ui.worktable;
       const dndDraggingFrom = state.ui.dragDrop.from;
       const dndOverWorktableLayout = state.ui.dragDrop.over?.worktableLayout;
@@ -56,8 +59,10 @@ export function createWorktableViewModelHook({
       return {
         isEditMode,
         currentWorkflowId,
+        currentProjectId,
         workflows,
         _activeWorkflows,
+        _loadedWorkflows,
         resizingItem,
         dndDraggingFrom,
         dndDraggingWidgetType,
@@ -67,28 +72,29 @@ export function createWorktableViewModelHook({
       }
     });
 
-    const activeWorkflows = useMemo(
-      () => _activeWorkflows
+    const loadedWorkflows = useMemo(
+      () => (_loadedWorkflows || [])
         .map(({ wflId, prjId }) => ({
           prjId,
           wfl: getOneFromEntityCollection(workflows, wflId)
         }))
-        .filter(({ wfl }) => wfl !== undefined) as {
+        .filter(({ wfl }) => !!wfl) as {
           prjId: string;
           wfl: Workflow;
         }[],
-      [_activeWorkflows, workflows]
-    )
+      [_loadedWorkflows, workflows]
+    );
 
     const widgetTypes = useAppState.useEntityList(state => state.entities.widgetTypes, widgetTypeIds);
     const copiedWidgets = useAppState.useEntityList(state => state.ui.copy.widgets.entities, copiedWidgetIds);
 
-    const noWorkflows = activeWorkflows.length === 0;
+    const noWorkflows = loadedWorkflows.length === 0;
 
     return {
       isEditMode,
       currentWorkflowId,
-      activeWorkflows,
+      currentProjectId: currentProjectId,
+      activeWorkflows: loadedWorkflows, // Renamed but still using loadedWorkflows
       noWorkflows,
       resizingItem,
       dndDraggingFrom,

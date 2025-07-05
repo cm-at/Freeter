@@ -60,6 +60,9 @@ describe('<Worktable />', () => {
         memSaver: fixtureMemSaver({
           activeWorkflows: [
             {prjId: projectId, wflId: workflowA.id},
+          ],
+          loadedWorkflows: [
+            {prjId: projectId, wflId: workflowA.id},
           ]
         }),
         projectSwitcher: fixtureProjectSwitcher({
@@ -80,7 +83,8 @@ describe('<Worktable />', () => {
       ui: {
         editMode: false,
         memSaver: fixtureMemSaver({
-          activeWorkflows: []
+          activeWorkflows: [],
+          loadedWorkflows: []
         }),
         projectSwitcher: fixtureProjectSwitcher({
           currentProjectId: projectId,
@@ -100,6 +104,10 @@ describe('<Worktable />', () => {
       },
       ui: {
         editMode: true,
+        memSaver: fixtureMemSaver({
+          activeWorkflows: [],
+          loadedWorkflows: []
+        }),
         projectSwitcher: fixtureProjectSwitcher({
           currentProjectId: projectId,
         })
@@ -126,7 +134,8 @@ describe('<Worktable />', () => {
       },
       ui: {
         memSaver: fixtureMemSaver({
-          activeWorkflows: []
+          activeWorkflows: [],
+          loadedWorkflows: []
         }),
         projectSwitcher: fixtureProjectSwitcher({
           currentProjectId: projectId,
@@ -156,6 +165,10 @@ describe('<Worktable />', () => {
           activeWorkflows: [
             {prjId: projectId, wflId: workflowA.id},
             {prjId: projectId, wflId: workflowB.id}
+          ],
+          loadedWorkflows: [
+            {prjId: projectId, wflId: workflowA.id},
+            {prjId: projectId, wflId: workflowB.id}
           ]
         }),
         projectSwitcher: fixtureProjectSwitcher({
@@ -182,6 +195,10 @@ describe('<Worktable />', () => {
       ui: {
         memSaver: fixtureMemSaver({
           activeWorkflows: [
+            {prjId: projectId, wflId: workflowA.id},
+            {prjId: projectId, wflId: workflowB.id}
+          ],
+          loadedWorkflows: [
             {prjId: projectId, wflId: workflowA.id},
             {prjId: projectId, wflId: workflowB.id}
           ]

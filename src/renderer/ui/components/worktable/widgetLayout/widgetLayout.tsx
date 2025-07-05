@@ -70,7 +70,7 @@ export function createWidgetLayoutComponent({
         ref={layoutEl}
         onContextMenu={onContextMenu}
         data-testid="widget-layout"
-        {...{ inert: !isVisible ? true : undefined }}
+        {...{ inert: !isVisible ? 'true' : undefined }}
       >
         { ghostItemRect && <WidgetLayoutItemGhost
           w={ghostItemRect.w}

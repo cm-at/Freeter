@@ -195,6 +195,7 @@ export interface AppsState {
 
 export interface MemSaverState {
   activeWorkflows: MemSaverWorkflowList;
+  loadedWorkflows: MemSaverWorkflowList; // All workflows that have been loaded at least once
   workflowTimeouts: Record<EntityId, NodeJS.Timeout>;
 }
 
@@ -252,6 +253,7 @@ export function createUiState(): UiState {
     },
     memSaver: {
       activeWorkflows: [],
+      loadedWorkflows: [],
       workflowTimeouts: {}
     },
     modalScreens: {

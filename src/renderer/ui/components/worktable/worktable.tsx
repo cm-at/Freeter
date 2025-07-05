@@ -24,6 +24,7 @@ export function createWorktableComponent({
   function WorktableComponent() {
     const {
       currentWorkflowId,
+      currentProjectId,
       dndDraggingFrom,
       dndDraggingWidgetType,
       dndOverWorktableLayout,
@@ -53,18 +54,20 @@ export function createWorktableComponent({
         className={styles.worktable}
       >
         {activeWorkflows.map(({wfl, prjId}) => {
-          const isCurrentWorkflow = wfl.id === currentWorkflowId;
+          // Only show as visible if it's the current workflow in the current project
+          const isVisible = wfl.id === currentWorkflowId && prjId === currentProjectId;
+          
           return <WidgetLayout
             key={wfl.id}
             projectId={prjId}
             workflowId={wfl.id}
-            isVisible={isCurrentWorkflow}
+            isVisible={isVisible}
             layoutItems={wfl.layout}
-            isEditMode={isCurrentWorkflow ? isEditMode : false}
-            resizingItem={isCurrentWorkflow ? resizingItem : undefined}
-            dndDraggingFrom={isCurrentWorkflow ? dndDraggingFrom : undefined}
-            dndDraggingWidgetType={isCurrentWorkflow ? dndDraggingWidgetType : undefined}
-            dndOverWorktableLayout={isCurrentWorkflow ? dndOverWorktableLayout : undefined}
+            isEditMode={isVisible ? isEditMode : false}
+            resizingItem={isVisible ? resizingItem : undefined}
+            dndDraggingFrom={isVisible ? dndDraggingFrom : undefined}
+            dndDraggingWidgetType={isVisible ? dndDraggingWidgetType : undefined}
+            dndOverWorktableLayout={isVisible ? dndOverWorktableLayout : undefined}
             widgetTypes={widgetTypes}
             copiedWidgets={copiedWidgets}
           />
