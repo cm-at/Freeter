@@ -7,3 +7,8 @@ export interface WebpageExposedApi {
   openUrl: (url: string) => void;
   getUrl: () => string;
 }
+
+export interface BrowserExposedApi {
+  openUrl: (url: string) => void;
+  getUrl: () => string;
+}

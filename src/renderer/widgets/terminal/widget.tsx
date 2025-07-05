@@ -276,6 +276,15 @@ function WidgetComp({id, settings, widgetApi, env}: WidgetReactComponentProps<Se
     terminalApi.createTerminal(id, shellPath, initialCwd)
     .then(({ ptyId }) => {
       console.log('[TerminalWidget] Terminal created successfully with ptyId:', ptyId);
+      
+      // Check if we got a valid ptyId
+      if (ptyId < 0) {
+        console.error('[TerminalWidget] Invalid ptyId received:', ptyId);
+        term.writeln('\r\n[Failed to create terminal - invalid shell or directory]');
+        term.writeln('\r\nPlease check your terminal settings.');
+        return;
+      }
+      
       ptyIdRef.current = ptyId;
       
       // Restore scrollback if available (but don't block on it)

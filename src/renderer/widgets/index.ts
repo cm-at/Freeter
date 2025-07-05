@@ -4,6 +4,7 @@
  */
 
 import { WidgetSettings, WidgetType } from '@/widgets/appModules'
+import browser from './browser';
 import commander from './commander';
 import fileOpener from './file-opener';
 import linkOpener from './link-opener';
@@ -15,6 +16,7 @@ import webpage from './webpage';
 import webQuery from './web-query';
 
 const widgetTypes = [
+  browser,
   commander,
   fileOpener,
   linkOpener,
