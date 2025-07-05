@@ -51,6 +51,9 @@ export function CommandBar({ viewModel }: CommandBarProps) {
   const currentProjectId = viewModel.currentProjectId
   const currentWorkflowId = viewModel.currentWorkflowId
 
+  const iconStyle = { color: 'var(--freeter-componentColor90)' }
+  const activeIconStyle = { color: 'var(--freeter-primary)' }
+
   React.useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
@@ -78,7 +81,7 @@ export function CommandBar({ viewModel }: CommandBarProps) {
                   setOpen(false);
                 }}
               >
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="mr-2 h-4 w-4" style={iconStyle} />
                 <span>Add New Widget</span>
                 <CommandShortcut>⌘N</CommandShortcut>
               </CommandItem>
@@ -88,7 +91,7 @@ export function CommandBar({ viewModel }: CommandBarProps) {
                   setOpen(false);
                 }}
               >
-                <Copy className="mr-2 h-4 w-4" />
+                <Copy className="mr-2 h-4 w-4" style={iconStyle} />
                 <span>Copy Current Widget</span>
                 <CommandShortcut>⌘C</CommandShortcut>
               </CommandItem>
@@ -98,7 +101,7 @@ export function CommandBar({ viewModel }: CommandBarProps) {
                   setOpen(false);
                 }}
               >
-                <Clipboard className="mr-2 h-4 w-4" />
+                <Clipboard className="mr-2 h-4 w-4" style={iconStyle} />
                 <span>Paste Widget</span>
                 <CommandShortcut>⌘V</CommandShortcut>
               </CommandItem>
@@ -117,10 +120,10 @@ export function CommandBar({ viewModel }: CommandBarProps) {
                     setOpen(false);
                   }}
                 >
-                  <FolderOpen className="mr-2 h-4 w-4" />
+                  <FolderOpen className="mr-2 h-4 w-4" style={iconStyle} />
                   {project.name}
                   {project.id === currentProjectId && (
-                    <CheckCircle className="ml-auto h-4 w-4 text-green-600" />
+                    <CheckCircle className="ml-auto h-4 w-4" style={activeIconStyle} />
                   )}
                 </CommandItem>
               ))}
@@ -139,10 +142,10 @@ export function CommandBar({ viewModel }: CommandBarProps) {
                     setOpen(false);
                   }}
                 >
-                  <FileText className="mr-2 h-4 w-4" />
+                  <FileText className="mr-2 h-4 w-4" style={iconStyle} />
                   {workflow.name}
                   {workflow.id === currentWorkflowId && (
-                    <CheckCircle className="ml-auto h-4 w-4 text-green-600" />
+                    <CheckCircle className="ml-auto h-4 w-4" style={activeIconStyle} />
                   )}
                 </CommandItem>
               ))}
@@ -161,7 +164,7 @@ export function CommandBar({ viewModel }: CommandBarProps) {
                     setOpen(false);
                   }}
                 >
-                  <Square className="mr-2 h-4 w-4" />
+                  <Square className="mr-2 h-4 w-4" style={iconStyle} />
                   {widget.name || widget.type}
                 </CommandItem>
               ))}
@@ -177,7 +180,7 @@ export function CommandBar({ viewModel }: CommandBarProps) {
                   setOpen(false);
                 }}
               >
-                <Settings className="mr-2 h-4 w-4" />
+                <Settings className="mr-2 h-4 w-4" style={iconStyle} />
                 <span>Settings</span>
                 <CommandShortcut>⌘,</CommandShortcut>
               </CommandItem>
@@ -187,7 +190,7 @@ export function CommandBar({ viewModel }: CommandBarProps) {
                   setOpen(false);
                 }}
               >
-                <Info className="mr-2 h-4 w-4" />
+                <Info className="mr-2 h-4 w-4" style={iconStyle} />
                 <span>About</span>
               </CommandItem>
             </CommandGroup>

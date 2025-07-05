@@ -26,7 +26,7 @@ const DialogOverlay = React.forwardRef<
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
         zIndex: 9999
       }}
       {...props}
@@ -54,11 +54,12 @@ const DialogContent = React.forwardRef<
           top: '20%',
           transform: 'translateX(-50%)',
           zIndex: 10000,
-          backgroundColor: '#ffffff',
+          backgroundColor: 'var(--freeter-modalScreenBackground)',
           borderRadius: '12px',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
           width: '90%',
-          maxWidth: '640px'
+          maxWidth: '640px',
+          border: '1px solid var(--freeter-modalScreenBorder)'
         }}
         {...props}
       >

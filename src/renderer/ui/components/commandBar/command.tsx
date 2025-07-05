@@ -17,12 +17,13 @@ const Command = React.forwardRef<
       className
     )}
     style={{
-      backgroundColor: '#ffffff',
-      border: '1px solid rgba(0, 0, 0, 0.1)',
-      boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+      backgroundColor: 'var(--freeter-modalScreenBackground)',
+      border: '1px solid var(--freeter-componentBorder)',
+      boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.25), 0 10px 10px -5px rgba(0, 0, 0, 0.15)',
       maxHeight: '500px',
       width: '100%',
-      overflow: 'hidden'
+      overflow: 'hidden',
+      color: 'var(--freeter-componentColor)'
     }}
     {...props}
   />
@@ -37,7 +38,7 @@ const CommandDialog = ({ children, className, ...props }: CommandDialogProps) =>
   return (
     <Dialog {...props}>
       <DialogContent className={cn("overflow-hidden p-0 shadow-lg", className)} style={{
-        backgroundColor: '#ffffff',
+        backgroundColor: 'var(--freeter-modalScreenBackground)',
         padding: 0,
         overflow: 'hidden',
         maxWidth: '640px',
@@ -58,10 +59,10 @@ const CommandInput = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input>
 >(({ className, ...props }, ref) => (
   <div className="flex items-center border-b px-3" style={{
-    borderBottom: '1px solid rgba(0, 0, 0, 0.05)',
-    backgroundColor: '#fafafa'
+    borderBottom: '1px solid var(--freeter-componentBorder)',
+    backgroundColor: 'var(--freeter-inputBackground)'
   }}>
-    <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+    <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" style={{ color: 'var(--freeter-componentColor80)' }} />
     <CommandPrimitive.Input
       ref={ref}
       className={cn(
@@ -74,7 +75,8 @@ const CommandInput = React.forwardRef<
         outline: 'none',
         backgroundColor: 'transparent',
         width: '100%',
-        border: 'none'
+        border: 'none',
+        color: 'var(--freeter-inputColor)'
       }}
       {...props}
     />
@@ -94,7 +96,7 @@ const CommandList = React.forwardRef<
       maxHeight: '400px',
       overflow: 'auto',
       padding: '8px',
-      backgroundColor: '#ffffff'
+      backgroundColor: 'var(--freeter-modalScreenBackground)'
     }}
     {...props}
   />
@@ -112,7 +114,7 @@ const CommandEmpty = React.forwardRef<
     style={{
       padding: '24px',
       textAlign: 'center',
-      color: '#6b7280'
+      color: 'var(--freeter-componentColor80)'
     }}
     {...props}
   />
@@ -129,7 +131,7 @@ const CommandGroup = React.forwardRef<
       [cmdk-group-heading] {
         font-size: 12px !important;
         font-weight: 600 !important;
-        color: #6b7280 !important;
+        color: var(--freeter-componentColor80) !important;
         padding: 8px 12px 4px !important;
         text-transform: uppercase !important;
         letter-spacing: 0.05em !important;
@@ -160,7 +162,7 @@ const CommandSeparator = React.forwardRef<
     className={cn("-mx-1 h-px bg-border", className)}
     style={{
       margin: '12px 0',
-      borderTop: '1px solid rgba(0, 0, 0, 0.05)',
+      borderTop: '1px solid var(--freeter-componentBorder)',
       height: '1px'
     }}
     {...props}
@@ -185,10 +187,11 @@ const CommandItem = React.forwardRef<
       transition: 'background-color 0.15s ease',
       display: 'flex',
       alignItems: 'center',
-      gap: '8px'
+      gap: '8px',
+      color: 'var(--freeter-componentColor)'
     }}
     onMouseEnter={(e) => {
-      e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.04)'
+      e.currentTarget.style.backgroundColor = 'var(--freeter-buttonHoverBackground)'
     }}
     onMouseLeave={(e) => {
       e.currentTarget.style.backgroundColor = 'transparent'
@@ -212,7 +215,7 @@ const CommandShortcut = ({
       style={{
         marginLeft: 'auto',
         fontSize: '12px',
-        color: '#9ca3af',
+        color: 'var(--freeter-componentColor70)',
         letterSpacing: '0.05em'
       }}
       {...props}
