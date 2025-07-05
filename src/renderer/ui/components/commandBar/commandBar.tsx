@@ -51,21 +51,6 @@ export function CommandBar({ viewModel }: CommandBarProps) {
   const currentProjectId = viewModel.currentProjectId
   const currentWorkflowId = viewModel.currentWorkflowId
 
-  const itemStyle = {
-    padding: '10px 16px',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    transition: 'background-color 0.15s ease'
-  }
-
-  const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>) => {
-    e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.04)'
-  }
-
-  const handleMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
-    e.currentTarget.style.backgroundColor = 'transparent'
-  }
-
   React.useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
@@ -80,52 +65,18 @@ export function CommandBar({ viewModel }: CommandBarProps) {
   return (
     <>
       <CommandDialog open={open} onOpenChange={setOpen}>
-        <Command 
-          className="rounded-lg border shadow-md"
-          style={{
-            backgroundColor: '#ffffff',
-            border: '1px solid rgba(0, 0, 0, 0.1)',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-            maxHeight: '500px',
-            width: '100%',
-            overflow: 'hidden'
-          }}
-        >
-          <CommandInput 
-            placeholder="Type a command or search..." 
-            style={{
-              padding: '16px 20px',
-              fontSize: '15px',
-              borderBottom: '1px solid rgba(0, 0, 0, 0.05)',
-              outline: 'none',
-              backgroundColor: '#fafafa'
-            }}
-          />
-          <CommandList 
-            style={{
-              maxHeight: '400px',
-              overflow: 'auto',
-              padding: '8px',
-              backgroundColor: '#ffffff'
-            }}
-          >
+        <Command className="rounded-lg border shadow-md">
+          <CommandInput placeholder="Type a command or search..." />
+          <CommandList>
             <CommandEmpty>No results found.</CommandEmpty>
             
             {/* Quick Actions */}
-            <CommandGroup 
-              heading="Quick Actions"
-              style={{
-                marginBottom: '8px'
-              }}
-            >
+            <CommandGroup heading="Quick Actions">
               <CommandItem
                 onSelect={() => {
                   viewModel.toggleEditMode();
                   setOpen(false);
                 }}
-                style={itemStyle}
-                onMouseEnter={handleMouseEnter}
-                onMouseLeave={handleMouseLeave}
               >
                 <Plus className="mr-2 h-4 w-4" />
                 <span>Add New Widget</span>
@@ -136,9 +87,6 @@ export function CommandBar({ viewModel }: CommandBarProps) {
                   // TODO: Implement copy widget
                   setOpen(false);
                 }}
-                style={itemStyle}
-                onMouseEnter={handleMouseEnter}
-                onMouseLeave={handleMouseLeave}
               >
                 <Copy className="mr-2 h-4 w-4" />
                 <span>Copy Current Widget</span>
@@ -149,9 +97,6 @@ export function CommandBar({ viewModel }: CommandBarProps) {
                   // TODO: Implement paste widget
                   setOpen(false);
                 }}
-                style={itemStyle}
-                onMouseEnter={handleMouseEnter}
-                onMouseLeave={handleMouseLeave}
               >
                 <Clipboard className="mr-2 h-4 w-4" />
                 <span>Paste Widget</span>
@@ -159,15 +104,10 @@ export function CommandBar({ viewModel }: CommandBarProps) {
               </CommandItem>
             </CommandGroup>
             
-            <CommandSeparator style={{ margin: '12px 0', borderTop: '1px solid rgba(0, 0, 0, 0.05)' }} />
+            <CommandSeparator />
             
             {/* Projects */}
-            <CommandGroup 
-              heading="Projects"
-              style={{
-                marginBottom: '8px'
-              }}
-            >
+            <CommandGroup heading="Projects">
               {projects.map((project) => (
                 <CommandItem
                   key={project.id}
@@ -176,9 +116,6 @@ export function CommandBar({ viewModel }: CommandBarProps) {
                     viewModel.switchToProject(project.id);
                     setOpen(false);
                   }}
-                  style={itemStyle}
-                  onMouseEnter={handleMouseEnter}
-                  onMouseLeave={handleMouseLeave}
                 >
                   <FolderOpen className="mr-2 h-4 w-4" />
                   {project.name}
@@ -189,15 +126,10 @@ export function CommandBar({ viewModel }: CommandBarProps) {
               ))}
             </CommandGroup>
             
-            <CommandSeparator style={{ margin: '12px 0', borderTop: '1px solid rgba(0, 0, 0, 0.05)' }} />
+            <CommandSeparator />
             
             {/* Workflows */}
-            <CommandGroup 
-              heading="Workflows"
-              style={{
-                marginBottom: '8px'
-              }}
-            >
+            <CommandGroup heading="Workflows">
               {workflows.map((workflow) => (
                 <CommandItem
                   key={workflow.id}
@@ -206,9 +138,6 @@ export function CommandBar({ viewModel }: CommandBarProps) {
                     viewModel.switchToWorkflow(workflow.id);
                     setOpen(false);
                   }}
-                  style={itemStyle}
-                  onMouseEnter={handleMouseEnter}
-                  onMouseLeave={handleMouseLeave}
                 >
                   <FileText className="mr-2 h-4 w-4" />
                   {workflow.name}
@@ -219,15 +148,10 @@ export function CommandBar({ viewModel }: CommandBarProps) {
               ))}
             </CommandGroup>
             
-            <CommandSeparator style={{ margin: '12px 0', borderTop: '1px solid rgba(0, 0, 0, 0.05)' }} />
+            <CommandSeparator />
             
             {/* Widgets */}
-            <CommandGroup 
-              heading="Widgets"
-              style={{
-                marginBottom: '8px'
-              }}
-            >
+            <CommandGroup heading="Widgets">
               {widgets.map((widget) => (
                 <CommandItem
                   key={widget.id}
@@ -236,9 +160,6 @@ export function CommandBar({ viewModel }: CommandBarProps) {
                     // TODO: Implement focus on widget
                     setOpen(false);
                   }}
-                  style={itemStyle}
-                  onMouseEnter={handleMouseEnter}
-                  onMouseLeave={handleMouseLeave}
                 >
                   <Square className="mr-2 h-4 w-4" />
                   {widget.name || widget.type}
@@ -246,23 +167,15 @@ export function CommandBar({ viewModel }: CommandBarProps) {
               ))}
             </CommandGroup>
             
-            <CommandSeparator style={{ margin: '12px 0', borderTop: '1px solid rgba(0, 0, 0, 0.05)' }} />
+            <CommandSeparator />
             
             {/* Settings */}
-            <CommandGroup 
-              heading="Settings"
-              style={{
-                marginBottom: '8px'
-              }}
-            >
+            <CommandGroup heading="Settings">
               <CommandItem
                 onSelect={() => {
                   viewModel.openSettings();
                   setOpen(false);
                 }}
-                style={itemStyle}
-                onMouseEnter={handleMouseEnter}
-                onMouseLeave={handleMouseLeave}
               >
                 <Settings className="mr-2 h-4 w-4" />
                 <span>Settings</span>
@@ -273,9 +186,6 @@ export function CommandBar({ viewModel }: CommandBarProps) {
                   viewModel.openAbout();
                   setOpen(false);
                 }}
-                style={itemStyle}
-                onMouseEnter={handleMouseEnter}
-                onMouseLeave={handleMouseLeave}
               >
                 <Info className="mr-2 h-4 w-4" />
                 <span>About</span>

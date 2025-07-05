@@ -16,24 +16,38 @@ const Command = React.forwardRef<
       "flex h-full w-full flex-col overflow-hidden rounded-md bg-popover text-popover-foreground",
       className
     )}
+    style={{
+      backgroundColor: '#ffffff',
+      border: '1px solid rgba(0, 0, 0, 0.1)',
+      boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+      maxHeight: '500px',
+      width: '100%',
+      overflow: 'hidden'
+    }}
     {...props}
   />
 ))
 Command.displayName = CommandPrimitive.displayName
 
-interface CommandDialogProps extends DialogProps {}
+interface CommandDialogProps extends DialogProps {
+  className?: string
+}
 
-const CommandDialog = ({ children, ...props }: CommandDialogProps) => {
+const CommandDialog = ({ children, className, ...props }: CommandDialogProps) => {
   return (
     <Dialog {...props}>
-      <DialogContent className="overflow-hidden p-0 shadow-lg">
+      <DialogContent className={cn("overflow-hidden p-0 shadow-lg", className)} style={{
+        backgroundColor: '#ffffff',
+        padding: 0,
+        overflow: 'hidden',
+        maxWidth: '640px',
+        borderRadius: '12px'
+      }}>
         <DialogTitle className="sr-only">Command Menu</DialogTitle>
         <DialogDescription className="sr-only">
-          Navigate through projects, workflows, and widgets. Execute quick actions.
+          Command menu for quick navigation and actions
         </DialogDescription>
-        <Command className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5">
-          {children}
-        </Command>
+        <Command>{children}</Command>
       </DialogContent>
     </Dialog>
   )
@@ -43,7 +57,10 @@ const CommandInput = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive.Input>,
   React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input>
 >(({ className, ...props }, ref) => (
-  <div className="flex items-center border-b px-3" cmdk-input-wrapper="">
+  <div className="flex items-center border-b px-3" style={{
+    borderBottom: '1px solid rgba(0, 0, 0, 0.05)',
+    backgroundColor: '#fafafa'
+  }}>
     <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
     <CommandPrimitive.Input
       ref={ref}
@@ -51,6 +68,14 @@ const CommandInput = React.forwardRef<
         "flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
         className
       )}
+      style={{
+        padding: '16px 8px',
+        fontSize: '15px',
+        outline: 'none',
+        backgroundColor: 'transparent',
+        width: '100%',
+        border: 'none'
+      }}
       {...props}
     />
   </div>
@@ -65,6 +90,12 @@ const CommandList = React.forwardRef<
   <CommandPrimitive.List
     ref={ref}
     className={cn("max-h-[300px] overflow-y-auto overflow-x-hidden", className)}
+    style={{
+      maxHeight: '400px',
+      overflow: 'auto',
+      padding: '8px',
+      backgroundColor: '#ffffff'
+    }}
     {...props}
   />
 ))
@@ -74,10 +105,15 @@ CommandList.displayName = CommandPrimitive.List.displayName
 const CommandEmpty = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive.Empty>,
   React.ComponentPropsWithoutRef<typeof CommandPrimitive.Empty>
->((props, ref) => (
+>(({ className, ...props }, ref) => (
   <CommandPrimitive.Empty
     ref={ref}
-    className="py-6 text-center text-sm"
+    className={cn("py-6 text-center text-sm", className)}
+    style={{
+      padding: '24px',
+      textAlign: 'center',
+      color: '#6b7280'
+    }}
     {...props}
   />
 ))
@@ -88,14 +124,29 @@ const CommandGroup = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive.Group>,
   React.ComponentPropsWithoutRef<typeof CommandPrimitive.Group>
 >(({ className, ...props }, ref) => (
-  <CommandPrimitive.Group
-    ref={ref}
-    className={cn(
-      "overflow-hidden p-1 text-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground",
-      className
-    )}
-    {...props}
-  />
+  <>
+    <style>{`
+      [cmdk-group-heading] {
+        font-size: 12px !important;
+        font-weight: 600 !important;
+        color: #6b7280 !important;
+        padding: 8px 12px 4px !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.05em !important;
+      }
+    `}</style>
+    <CommandPrimitive.Group
+      ref={ref}
+      className={cn(
+        "overflow-hidden p-1 text-foreground",
+        className
+      )}
+      style={{
+        marginBottom: '8px'
+      }}
+      {...props}
+    />
+  </>
 ))
 
 CommandGroup.displayName = CommandPrimitive.Group.displayName
@@ -107,6 +158,11 @@ const CommandSeparator = React.forwardRef<
   <CommandPrimitive.Separator
     ref={ref}
     className={cn("-mx-1 h-px bg-border", className)}
+    style={{
+      margin: '12px 0',
+      borderTop: '1px solid rgba(0, 0, 0, 0.05)',
+      height: '1px'
+    }}
     {...props}
   />
 ))
@@ -122,6 +178,21 @@ const CommandItem = React.forwardRef<
       "relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none aria-selected:bg-accent aria-selected:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       className
     )}
+    style={{
+      padding: '10px 16px',
+      borderRadius: '6px',
+      cursor: 'pointer',
+      transition: 'background-color 0.15s ease',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px'
+    }}
+    onMouseEnter={(e) => {
+      e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.04)'
+    }}
+    onMouseLeave={(e) => {
+      e.currentTarget.style.backgroundColor = 'transparent'
+    }}
     {...props}
   />
 ))
@@ -138,6 +209,12 @@ const CommandShortcut = ({
         "ml-auto text-xs tracking-widest text-muted-foreground",
         className
       )}
+      style={{
+        marginLeft: 'auto',
+        fontSize: '12px',
+        color: '#9ca3af',
+        letterSpacing: '0.05em'
+      }}
       {...props}
     />
   )
