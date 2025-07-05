@@ -220,7 +220,7 @@ if (!app.requestSingleInstanceLock()) {
       const getWindowStateUseCase = createGetWindowStateUseCase({ windowStore })
       const setWindowStateUseCase = createSetWindowStateUseCase({ windowStore })
       
-      const url = isDevMode ? 'http://localhost:4004' : `${schemeFreeterFile}://${hostFreeterApp}/index.html`;
+      const url = isDevMode ? 'http://localhost:4005' : `${schemeFreeterFile}://${hostFreeterApp}/index.html`;
       console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> LOADING URL: ', url);
 
       appWindow = createRendererWindow(
@@ -241,6 +241,16 @@ if (!app.requestSingleInstanceLock()) {
         // Disable menu in child windows
         if (win !== appWindow) {
           win.removeMenu();
+          
+          // Ensure child windows don't block the main window
+          win.setAlwaysOnTop(false);
+          
+          // When child window is closed, focus back to main window
+          win.on('closed', () => {
+            if (appWindow) {
+              appWindow.focus();
+            }
+          });
         }
       });
 

@@ -21,7 +21,7 @@ export function createIpcMainEventValidator(channelPrefix: string, authority: st
     const { isSenderFrameMain: isMainFrame } = event;
 
     const isDevMode = process.env.NODE_ENV === 'development';
-    const allowedAuthorities = isDevMode ? [authority, 'localhost:4004'] : [authority];
+    const allowedAuthorities = isDevMode ? [authority, 'localhost:4005'] : [authority];
 
     let host = '';
     try {

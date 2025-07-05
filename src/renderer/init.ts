@@ -145,6 +145,8 @@ import { createSetProjectSwitcherPositionUseCase } from '@/application/useCases/
 import { createSetEditTogglePositionUseCase } from '@/application/useCases/setEditTogglePosition';
 import { createGetWidgetsInCurrentWorkflowUseCase } from '@/application/useCases/widget/widgetApiWidgets/getWidgetsInCurrentWorkflow';
 import { createSetExposedApiUseCase } from '@/application/useCases/widget/setExposedApi';
+import { createCommandBarViewModelHook } from '@/ui/components/commandBar/commandBarViewModel';
+import { CommandBar } from '@/ui/components/commandBar';
 
 function prepareDataStorageForRenderer(dataStorage: DataStorage): DataStorageRenderer {
   return setTextOnlyIfChanged(withJson(dataStorage));
@@ -568,6 +570,8 @@ function createUI(stateHooks: ReturnType<typeof createUiHooks>, useCases: Awaite
     usePaletteViewModel
   });
 
+  const useCommandBarViewModel = createCommandBarViewModelHook(deps);
+
   const useWidgetViewModel = createWidgetViewModelHook(deps);
   const Widget = createWidgetComponent({
     useWidgetViewModel
@@ -668,6 +672,7 @@ function createUI(stateHooks: ReturnType<typeof createUiHooks>, useCases: Awaite
     ApplicationSettings,
     AppManager,
     About,
+    useCommandBarViewModel,
   });
 
   const App = createAppComponent({

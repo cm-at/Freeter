@@ -32,7 +32,10 @@ const terminalManager = new TerminalManager();
 
 // Set up IPC channel forwarding to renderer windows
 ipcMain.on(IPC_TERMINAL_CHANNEL, (event: any, message: any) => {
-  console.log('[TerminalControllers] Forwarding terminal message to all windows:', message);
+  // Only log the message type, not the full data
+  if (message && message.type) {
+    console.log('[TerminalControllers] Forwarding terminal message:', { type: message.type, pid: message.pid });
+  }
   // Forward to all windows
   BrowserWindow.getAllWindows().forEach(window => {
     if (!window.isDestroyed()) {
@@ -71,7 +74,7 @@ export function createTerminalControllers({
   }, {
     channel: ipcTerminalWriteChannel,
     handle: async (event, ptyId, data) => {
-      console.log('[TerminalControllers] Terminal write request:', { ptyId, data: data.substring(0, 50) + '...' });
+      console.log('[TerminalControllers] Terminal write request:', { ptyId, dataLength: data.length });
       
       // Write to terminal using the terminal manager
       terminalManager.writeToTerminal(ptyId, data);

@@ -3,7 +3,7 @@
  * GNU General Public License v3.0 or later (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
  */
 
-import { SettingBlock, SettingRow, SettingsEditorReactComponent, SettingsEditorReactComponentProps } from '@/widgets/appModules';
+import { CreateSettingsState, SettingBlock, SettingRow, SettingsEditorReactComponent, SettingsEditorReactComponentProps } from '@/widgets/appModules';
 
 export interface Settings {
   shell: string;
@@ -15,17 +15,19 @@ export interface Settings {
   autoStartCommand: string;
 }
 
-export function createSettingsState(): Settings {
-  return {
-    shell: '',
-    shellType: 'default',
-    cwd: '',
-    fontSize: 14,
-    fontFamily: 'monospace',
-    theme: 'dark',
-    autoStartCommand: ''
-  }
-}
+export const createSettingsState: CreateSettingsState<Settings> = (settings) => ({
+  shell: typeof settings.shell === 'string' ? settings.shell : '',
+  shellType: (settings.shellType === 'default' || settings.shellType === 'bash' || 
+              settings.shellType === 'zsh' || settings.shellType === 'fish' || 
+              settings.shellType === 'custom') ? settings.shellType : 'default',
+  cwd: typeof settings.cwd === 'string' ? settings.cwd : '',
+  fontSize: typeof settings.fontSize === 'number' ? settings.fontSize : 14,
+  fontFamily: typeof settings.fontFamily === 'string' ? settings.fontFamily : 'monospace',
+  theme: (settings.theme === 'dark' || settings.theme === 'light' || 
+          settings.theme === 'monokai' || settings.theme === 'solarized-dark' || 
+          settings.theme === 'solarized-light' || settings.theme === 'dracula') ? settings.theme : 'dark',
+  autoStartCommand: typeof settings.autoStartCommand === 'string' ? settings.autoStartCommand : ''
+})
 
 function SettingsEditorComp({settings, settingsApi}: SettingsEditorReactComponentProps<Settings>) {
   const {updateSettings} = settingsApi;
@@ -66,13 +68,13 @@ function SettingsEditorComp({settings, settingsApi}: SettingsEditorReactComponen
       {settings.shellType === 'custom' && (
         <SettingRow>
           <label>Custom Shell Path:</label>
-          <input
-            type="text"
-            value={settings.shell}
-            onChange={e => updateSettings({ ...settings, shell: e.target.value })}
+        <input
+          type="text"
+          value={settings.shell}
+          onChange={e => updateSettings({ ...settings, shell: e.target.value })}
             placeholder="e.g., /usr/local/bin/fish"
-          />
-        </SettingRow>
+        />
+      </SettingRow>
       )}
       <SettingRow>
         <label>Working Directory:</label>

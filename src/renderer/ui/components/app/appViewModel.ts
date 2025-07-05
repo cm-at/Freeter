@@ -8,7 +8,8 @@ import { contextMenuForTextInput } from '@/base/contextMenu';
 import { ModalScreenId } from '@/base/state/ui';
 import { sanitizeUiThemeId } from '@/base/uiTheme';
 import { UseAppState } from '@/ui/hooks/appState';
-import React, { ReactNode, createElement } from 'react';
+import React, { ReactNode, createElement, useState, useCallback } from 'react';
+import { CommandBarViewModelHook } from '@/ui/components/commandBar/commandBarViewModel';
 
 type Deps = {
   useAppState: UseAppState;
@@ -19,6 +20,7 @@ type Deps = {
   ApplicationSettings: React.FC;
   About: React.FC;
   showContextMenuUseCase: ShowContextMenuUseCase;
+  useCommandBarViewModel: CommandBarViewModelHook;
 }
 
 export function createAppViewModelHook({
@@ -30,6 +32,7 @@ export function createAppViewModelHook({
   ApplicationSettings,
   About,
   showContextMenuUseCase,
+  useCommandBarViewModel,
 }: Deps) {
   function useViewModel() {
     const [
@@ -51,6 +54,8 @@ export function createAppViewModelHook({
       state.ui.appConfig.uiTheme,
       state.ui.topBar
     ])
+
+    const commandBarViewModel = useCommandBarViewModel();
 
     const projectList = useAppState.useEntityList(state => state.entities.projects, projectIds);
     const hasProjects = projectList.length > 0;
@@ -95,7 +100,8 @@ export function createAppViewModelHook({
       hasModalScreens,
       contextMenuHandler,
       uiThemeId,
-      hasTopBar
+      hasTopBar,
+      commandBarViewModel
     }
   }
 

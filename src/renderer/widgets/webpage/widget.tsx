@@ -144,11 +144,33 @@ function Webview({settings, widgetApi, onRequireRestart, env, id}: WebviewProps)
     //   console.log(e.errorDescription);
     // };
 
+    // Fix for black screen issues
+    const handleVisibilityChange = () => {
+      if (!document.hidden && webviewEl) {
+        // Force webview to repaint when page becomes visible
+        webviewEl.style.display = 'none';
+        webviewEl.offsetHeight; // Force reflow
+        webviewEl.style.display = '';
+      }
+    };
+
+    const handleWindowFocus = () => {
+      // Force webview to repaint when window gains focus
+      if (webviewEl) {
+        // Use the same technique as visibility change
+        webviewEl.style.display = 'none';
+        webviewEl.offsetHeight; // Force reflow
+        webviewEl.style.display = '';
+      }
+    };
+
     // Add event listeners
     webviewEl.addEventListener('did-start-loading', handleDidStartLoading);
     webviewEl.addEventListener('did-stop-loading', handleDidStopLoading);
     // webviewEl.addEventListener('did-fail-load', handleDidFailLoad);
     webviewEl.addEventListener('context-menu', handleContextMenu)
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleWindowFocus);
 
     return () => {
       // Remove event listeners
@@ -156,6 +178,8 @@ function Webview({settings, widgetApi, onRequireRestart, env, id}: WebviewProps)
       webviewEl.removeEventListener('did-stop-loading', handleDidStopLoading);
       // webviewEl.removeEventListener('did-fail-load', handleDidFailLoad);
       webviewEl.removeEventListener('context-menu', handleContextMenu)
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleWindowFocus);
     };
   }, []);
 

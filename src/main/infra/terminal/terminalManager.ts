@@ -78,7 +78,7 @@ function getShellEnv(): NodeJS.ProcessEnv {
  * Wraps a node-pty instance so the rest of the app keeps the same API it used for the mock.
  */
 class NodePtyTerminal {
-  pid: number;
+    pid: number;
   private term: pty.IPty;
   private dataDisposable: pty.IDisposable | null = null;
   private exitDisposable: pty.IDisposable | null = null;
@@ -98,33 +98,33 @@ class NodePtyTerminal {
       env: shellEnv as { [key: string]: string },
     });
     this.pid = this.term.pid;
-  }
+    }
 
-  onData(callback: (data: string) => void): void {
+    onData(callback: (data: string) => void): void {
     // Dispose of previous listener if it exists
     if (this.dataDisposable) {
       this.dataDisposable.dispose();
     }
     this.dataDisposable = this.term.onData(callback);
-  }
+    }
 
-  onExit(callback: () => void): void {
+    onExit(callback: () => void): void {
     // Dispose of previous listener if it exists
     if (this.exitDisposable) {
       this.exitDisposable.dispose();
     }
     this.exitDisposable = this.term.onExit(() => callback());
-  }
+    }
 
-  write(data: string): void {
+    write(data: string): void {
     this.term.write(data);
-  }
+    }
 
-  resize(cols: number, rows: number): void {
+    resize(cols: number, rows: number): void {
     this.term.resize(cols, rows);
-  }
+    }
 
-  kill(): void {
+    kill(): void {
     // Clean up event listeners
     if (this.dataDisposable) {
       this.dataDisposable.dispose();
@@ -135,14 +135,14 @@ class NodePtyTerminal {
       this.exitDisposable = null;
     }
     this.term.kill();
-  }
+    }
 }
 
 export class TerminalManager {
   private terminals: Map<number, NodePtyTerminal> = new Map();
   private nextId = 1;
 
-  constructor() {
+    constructor() {
     console.log('[TerminalManager] Initializing TerminalManager');
   }
 
@@ -153,9 +153,9 @@ export class TerminalManager {
     
     console.log(`[TerminalManager] Creating terminal ${id} with shell: ${terminalShell}`);
     const terminal = new NodePtyTerminal(terminalShell, cwd);
-    
+
     terminal.onData((data) => {
-      console.log(`[TerminalManager] Terminal ${id} data:`, data);
+      // console.log(`[TerminalManager] Terminal ${id} data:`, data);
       // Send data to all renderer windows via IPC event
       // The terminal controller will forward this to renderer windows
       process.nextTick(() => {
@@ -165,7 +165,7 @@ export class TerminalManager {
           data: data
         });
       });
-    });
+        });
 
     terminal.onExit(() => {
       console.log(`[TerminalManager] Terminal ${id} exited`);
@@ -177,14 +177,14 @@ export class TerminalManager {
           pid: terminal.pid
         });
       });
-    });
+        });
 
     this.terminals.set(id, terminal);
     return terminal.pid;
-  }
+    }
 
   writeToTerminal(ptyId: number, data: string): void {
-    console.log(`[TerminalManager] Writing to terminal ${ptyId}:`, data);
+    console.log(`[TerminalManager] Writing to terminal ${ptyId}, length: ${data.length}`);
     // Find terminal by pid
     for (const [id, terminal] of this.terminals) {
       if (terminal.pid === ptyId) {
@@ -193,8 +193,8 @@ export class TerminalManager {
       }
     }
     console.warn(`[TerminalManager] Terminal with ptyId ${ptyId} not found`);
-  }
-
+        }
+        
   closeTerminal(ptyId: number): void {
     console.log(`[TerminalManager] Closing terminal ${ptyId}`);
     // Find terminal by pid

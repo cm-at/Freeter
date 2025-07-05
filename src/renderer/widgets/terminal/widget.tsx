@@ -5,11 +5,20 @@
 
 import { ReactComponent, WidgetReactComponentProps } from '@/widgets/appModules';
 import { Settings } from './settings';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import 'xterm/css/xterm.css';
 import styles from './widget.module.scss';
+import { TerminalProvider } from '@/application/interfaces/terminalProvider';
+
+// Terminal session data that should be persisted
+interface TerminalSession {
+  env?: Record<string, string>;
+  cwd?: string;
+  history?: string[];
+  scrollback?: string;
+}
 
 const themes = {
   dark: {
@@ -134,15 +143,92 @@ const themes = {
   }
 };
 
+type Unsubscribe = () => void;
+
 function WidgetComp({id, settings, widgetApi, env}: WidgetReactComponentProps<Settings>) {
-  console.log('[TerminalWidget] Rendering terminal widget:', { id, settings, hasWidgetApi: !!widgetApi });
+  console.log('[TerminalWidget] Component initialized with settings:', settings);
+  console.log('[TerminalWidget] Widget ID:', id);
+  console.log('[TerminalWidget] Widget API available:', !!widgetApi);
+  console.log('[TerminalWidget] dataStorage available:', !!widgetApi?.dataStorage);
+  
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<Terminal | null>(null);
-  const ptyIdRef = useRef<number | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
+  const ptyIdRef = useRef<number | null>(null);
+  const sessionLoadedRef = useRef(false);
+  const [sessionData, setSessionData] = useState<TerminalSession>({
+    env: {},
+    cwd: '',
+    history: [],
+    scrollback: ''
+  });
 
   // In preview mode (settings editor), don't show controls
   const showControls = !env.isPreview;
+
+  // Load session data when component mounts
+  const loadSessionData = async () => {
+    if (!widgetApi?.dataStorage) {
+      console.log('[TerminalWidget] No dataStorage API available, skipping session load');
+      sessionLoadedRef.current = true;
+      return;
+    }
+    
+    try {
+      const storageKey = `terminal-session-${id}`;
+      console.log('[TerminalWidget] Loading session data for widget:', id, 'with key:', storageKey);
+      const savedSession = await widgetApi.dataStorage.getJson(storageKey) as TerminalSession | undefined;
+      console.log('[TerminalWidget] Loaded session data:', savedSession);
+      if (savedSession) {
+        setSessionData(savedSession);
+      }
+      sessionLoadedRef.current = true;
+    } catch (error) {
+      console.error('[TerminalWidget] Failed to load session data:', error);
+      sessionLoadedRef.current = true;
+    }
+  };
+  
+  const saveSessionData = async (data: Partial<TerminalSession>) => {
+    if (!widgetApi?.dataStorage) {
+      console.log('[TerminalWidget] No dataStorage API available, skipping session save');
+      return;
+    }
+    
+    try {
+      const newSessionData = { ...sessionData, ...data };
+      const storageKey = `terminal-session-${id}`;
+      console.log('[TerminalWidget] Saving session data with key:', storageKey, 'data:', newSessionData);
+      await widgetApi.dataStorage.setJson(storageKey, newSessionData);
+      setSessionData(newSessionData);
+    } catch (error) {
+      console.error('[TerminalWidget] Failed to save session data:', error);
+    }
+  };
+
+  // Save current working directory when it changes
+  const updateCwd = useCallback((newCwd: string) => {
+    saveSessionData({ cwd: newCwd });
+  }, [saveSessionData]);
+
+  // Save scrollback buffer periodically
+  const saveScrollback = useCallback(() => {
+    if (!xtermRef.current) return;
+    
+    const buffer = xtermRef.current.buffer.active;
+    const lines: string[] = [];
+    
+    // Get last 1000 lines of scrollback
+    const startLine = Math.max(0, buffer.length - 1000);
+    for (let i = startLine; i < buffer.length; i++) {
+      const line = buffer.getLine(i);
+      if (line) {
+        lines.push(line.translateToString());
+      }
+    }
+    
+    saveSessionData({ scrollback: lines.join('\n') });
+  }, [saveSessionData]);
 
   const handleRefresh = () => {
     if (ptyIdRef.current && widgetApi) {
@@ -183,11 +269,24 @@ function WidgetComp({id, settings, widgetApi, env}: WidgetReactComponentProps<Se
       ? settings.shell 
       : settings.shell || '';
     
-    console.log('[TerminalWidget] Calling createTerminal with shell:', shellPath);
-    terminalApi.createTerminal(id, shellPath, settings.cwd)
+    // Use saved cwd if available, otherwise use settings cwd
+    const initialCwd = sessionData.cwd || settings.cwd;
+    
+    console.log('[TerminalWidget] Calling createTerminal with shell:', shellPath, 'cwd:', initialCwd);
+    terminalApi.createTerminal(id, shellPath, initialCwd)
     .then(({ ptyId }) => {
       console.log('[TerminalWidget] Terminal created successfully with ptyId:', ptyId);
       ptyIdRef.current = ptyId;
+      
+      // Restore scrollback if available (but don't block on it)
+      if (sessionData.scrollback && sessionData.scrollback.trim()) {
+        try {
+          term.write(sessionData.scrollback);
+          term.write('\r\n');
+        } catch (e) {
+          console.error('[TerminalWidget] Failed to restore scrollback:', e);
+        }
+      }
       
       console.log('[TerminalWidget] Setting up onData handler');
       term.onData(data => {
@@ -198,12 +297,8 @@ function WidgetComp({id, settings, widgetApi, env}: WidgetReactComponentProps<Se
       // Set up data listener
       console.log('[TerminalWidget] Registering data handler');
       const dataHandler = (pid: number, data: string) => {
-        console.log('[TerminalWidget] Data handler called:', { pid, ptyId, data });
         if (pid === ptyId) {
-          console.log('[TerminalWidget] Writing data to terminal display');
           term.write(String(data));
-        } else {
-          console.log('[TerminalWidget] Ignoring data for different pid:', pid);
         }
       };
       terminalApi.onTerminalData(dataHandler);
@@ -229,6 +324,20 @@ function WidgetComp({id, settings, widgetApi, env}: WidgetReactComponentProps<Se
           terminalApi.writeToTerminal(ptyId, settings.autoStartCommand.trim() + '\n');
         }, 100);
       }
+      
+      // Set up periodic scrollback saving (but don't let it interfere with operation)
+      if (widgetApi.dataStorage) {
+        const scrollbackInterval = setInterval(() => {
+          try {
+            saveScrollback();
+          } catch (e) {
+            console.error('[TerminalWidget] Failed to save scrollback:', e);
+          }
+        }, 30000); // Save every 30 seconds
+        
+        // Store interval ID for cleanup
+        (window as any)[`terminal-scrollback-${id}`] = scrollbackInterval;
+      }
     })
     .catch((error) => {
       console.error('[TerminalWidget] Failed to create terminal:', error);
@@ -248,12 +357,12 @@ function WidgetComp({id, settings, widgetApi, env}: WidgetReactComponentProps<Se
       return;
     }
 
-    console.log('[TerminalWidget] Creating Terminal instance');
     const term = new Terminal({
       fontSize: settings.fontSize,
       fontFamily: settings.fontFamily,
       theme: themes[settings.theme] || themes.dark,
-      cursorBlink: true
+      cursorBlink: true,
+      scrollback: 10000 // Increase scrollback buffer
     });
     xtermRef.current = term;
     
@@ -266,7 +375,14 @@ function WidgetComp({id, settings, widgetApi, env}: WidgetReactComponentProps<Se
     fitAddonRef.current = fitAddon;
     fitAddon.fit();
     
-    createTerminal();
+    // Load session data asynchronously without blocking terminal creation
+    loadSessionData().then(() => {
+      console.log('[TerminalWidget] Session data loaded, creating terminal');
+      createTerminal();
+    }).catch((error) => {
+      console.error('[TerminalWidget] Failed to load session data, creating terminal anyway:', error);
+      createTerminal();
+    });
 
     const resizeObserver = new ResizeObserver(() => {
       if (fitAddonRef.current) {
@@ -277,6 +393,19 @@ function WidgetComp({id, settings, widgetApi, env}: WidgetReactComponentProps<Se
 
     return () => {
       console.log('[TerminalWidget] Cleanup function called');
+      
+      // Save final scrollback before cleanup
+      if (widgetApi?.dataStorage) {
+        saveScrollback();
+      }
+      
+      // Clear scrollback interval
+      const intervalId = (window as any)[`terminal-scrollback-${id}`];
+      if (intervalId) {
+        clearInterval(intervalId);
+        delete (window as any)[`terminal-scrollback-${id}`];
+      }
+      
       resizeObserver.disconnect();
       if (ptyIdRef.current !== null) {
         console.log('[TerminalWidget] Closing terminal with ptyId:', ptyIdRef.current);

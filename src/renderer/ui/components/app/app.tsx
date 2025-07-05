@@ -12,6 +12,7 @@ import {SvgIcon} from '@/ui/components/basic/svgIcon';
 import { manage24Svg } from '@/ui/assets/images/appIcons';
 import { InAppNote } from '@/ui/components/basic/inAppNote';
 import { UITheme } from '@/ui/components/app/uiTheme/uiTheme';
+import { CommandBar } from '@/ui/components/commandBar';
 
 type Deps = {
   TopBar: React.FC;
@@ -27,11 +28,12 @@ export function createAppComponent({
   useAppViewModel
 }: Deps) {
   function App() {
-    const {modalScreens, hasModalScreens, hasProjects, contextMenuHandler, uiThemeId, hasTopBar} = useAppViewModel();
+    const {modalScreens, hasModalScreens, hasProjects, contextMenuHandler, uiThemeId, hasTopBar, commandBarViewModel} = useAppViewModel();
     return (
       <div onContextMenu={contextMenuHandler}>
         <UITheme themeId={uiThemeId} />
-        <div className={styles['main-screen']} data-testid="main-screen" {...{ inert: hasModalScreens ? true : undefined }}>
+        <CommandBar viewModel={commandBarViewModel} />
+        <div className={styles['main-screen']} data-testid="main-screen" {...{ inert: hasModalScreens ? 'true' : undefined }}>
           {hasTopBar && <TopBar />}
           <WorkflowSwitcher />
           {
@@ -46,7 +48,7 @@ export function createAppComponent({
         </div>
         {
           modalScreens.map(scr => (
-            scr && <div key={scr.id} data-testid="modal-screen" {...{ inert: !scr.isLast ? true : undefined }}>
+            scr && <div key={scr.id} data-testid="modal-screen" {...{ inert: !scr.isLast ? 'true' : undefined }}>
               {scr.comp}
             </div>
           ))

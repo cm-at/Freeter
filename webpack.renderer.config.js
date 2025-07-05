@@ -90,9 +90,10 @@ module.exports = {
             options: {
               modules: true,
               sourceMap: true,
-              importLoaders: 1
+              importLoaders: 2
             },
           },
+          'postcss-loader',
           'sass-loader',
         ],
         include: /\.module\.s?(c|a)ss$/,
@@ -102,6 +103,7 @@ module.exports = {
         use: [
           'style-loader',
           'css-loader',
+          'postcss-loader',
           'sass-loader'
         ],
         exclude: /\.module\.s?(c|a)ss$/,
@@ -149,9 +151,9 @@ module.exports = {
     },
     hot: false,
     liveReload: false,
-    port: 4004,
+    port: 4005,
     client: {
-      webSocketURL: 'ws://localhost:4004/ws',
+      webSocketURL: 'ws://localhost:4005/ws',
     },
     webSocketServer: false,
     allowedHosts: ['freeter-app'],

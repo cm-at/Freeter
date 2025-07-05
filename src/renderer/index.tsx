@@ -5,6 +5,7 @@
 
 import {createRoot} from 'react-dom/client';
 import { init } from './init';
+import './ui/globals.css';
 
 async function main() {
   const { App } = await init();
