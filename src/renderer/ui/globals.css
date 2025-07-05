@@ -2,12 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Debug styles to verify CSS is loading */
-body {
-  /* This should make the background slightly pink if CSS loads */
-  background-color: rgba(255, 200, 200, 0.05) !important;
-}
-
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -62,17 +56,4 @@ body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
   }
-}
-
-/* Debug: Make dialog portal visible */
-[data-radix-portal] {
-  /* Portal should be visible with a green border */
-  border: 3px solid green !important;
-}
-
-/* Ensure dialog is visible */
-[role="dialog"] {
-  background-color: white !important;
-  border: 5px solid red !important;
-  box-shadow: 0 0 50px rgba(0, 0, 0, 0.5) !important;
 } 

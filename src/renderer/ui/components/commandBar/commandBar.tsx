@@ -51,12 +51,25 @@ export function CommandBar({ viewModel }: CommandBarProps) {
   const currentProjectId = viewModel.currentProjectId
   const currentWorkflowId = viewModel.currentWorkflowId
 
+  const itemStyle = {
+    padding: '10px 16px',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    transition: 'background-color 0.15s ease'
+  }
+
+  const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.04)'
+  }
+
+  const handleMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.currentTarget.style.backgroundColor = 'transparent'
+  }
+
   React.useEffect(() => {
     const down = (e: KeyboardEvent) => {
-      console.log('[CommandBar] Key pressed:', e.key, 'Meta:', e.metaKey, 'Ctrl:', e.ctrlKey);
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault()
-        console.log('[CommandBar] Toggle command bar');
         setOpen((open) => !open)
       }
     }
@@ -66,29 +79,13 @@ export function CommandBar({ viewModel }: CommandBarProps) {
 
   return (
     <>
-      {/* Debug indicator */}
-      <div 
-        style={{ 
-          position: 'fixed', 
-          top: 10, 
-          right: 10, 
-          padding: '5px 10px', 
-          backgroundColor: open ? 'green' : 'red', 
-          color: 'white', 
-          zIndex: 10001,
-          fontSize: '12px'
-        }}
-      >
-        CommandBar: {open ? 'OPEN' : 'CLOSED'}
-      </div>
-      
       <CommandDialog open={open} onOpenChange={setOpen}>
         <Command 
           className="rounded-lg border shadow-md"
           style={{
-            backgroundColor: 'white',
-            border: '1px solid #e5e7eb',
-            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+            backgroundColor: '#ffffff',
+            border: '1px solid rgba(0, 0, 0, 0.1)',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
             maxHeight: '500px',
             width: '100%',
             overflow: 'hidden'
@@ -97,17 +94,19 @@ export function CommandBar({ viewModel }: CommandBarProps) {
           <CommandInput 
             placeholder="Type a command or search..." 
             style={{
-              padding: '12px',
-              fontSize: '14px',
-              borderBottom: '1px solid #e5e7eb',
-              outline: 'none'
+              padding: '16px 20px',
+              fontSize: '15px',
+              borderBottom: '1px solid rgba(0, 0, 0, 0.05)',
+              outline: 'none',
+              backgroundColor: '#fafafa'
             }}
           />
           <CommandList 
             style={{
               maxHeight: '400px',
               overflow: 'auto',
-              padding: '8px'
+              padding: '8px',
+              backgroundColor: '#ffffff'
             }}
           >
             <CommandEmpty>No results found.</CommandEmpty>
@@ -121,17 +120,12 @@ export function CommandBar({ viewModel }: CommandBarProps) {
             >
               <CommandItem
                 onSelect={() => {
-                  console.log('Add New Widget selected');
                   viewModel.toggleEditMode();
                   setOpen(false);
                 }}
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                style={itemStyle}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
               >
                 <Plus className="mr-2 h-4 w-4" />
                 <span>Add New Widget</span>
@@ -139,17 +133,12 @@ export function CommandBar({ viewModel }: CommandBarProps) {
               </CommandItem>
               <CommandItem
                 onSelect={() => {
-                  console.log('Copy Widget selected');
                   // TODO: Implement copy widget
                   setOpen(false);
                 }}
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                style={itemStyle}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
               >
                 <Copy className="mr-2 h-4 w-4" />
                 <span>Copy Current Widget</span>
@@ -157,17 +146,12 @@ export function CommandBar({ viewModel }: CommandBarProps) {
               </CommandItem>
               <CommandItem
                 onSelect={() => {
-                  console.log('Paste Widget selected');
                   // TODO: Implement paste widget
                   setOpen(false);
                 }}
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                style={itemStyle}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
               >
                 <Clipboard className="mr-2 h-4 w-4" />
                 <span>Paste Widget</span>
@@ -175,7 +159,7 @@ export function CommandBar({ viewModel }: CommandBarProps) {
               </CommandItem>
             </CommandGroup>
             
-            <CommandSeparator style={{ margin: '8px 0', borderTop: '1px solid #e5e7eb' }} />
+            <CommandSeparator style={{ margin: '12px 0', borderTop: '1px solid rgba(0, 0, 0, 0.05)' }} />
             
             {/* Projects */}
             <CommandGroup 
@@ -189,17 +173,12 @@ export function CommandBar({ viewModel }: CommandBarProps) {
                   key={project.id}
                   value={project.name}
                   onSelect={() => {
-                    console.log('Project selected:', project.name);
                     viewModel.switchToProject(project.id);
                     setOpen(false);
                   }}
-                  style={{
-                    padding: '8px 12px',
-                    borderRadius: '4px',
-                    cursor: 'pointer'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  style={itemStyle}
+                  onMouseEnter={handleMouseEnter}
+                  onMouseLeave={handleMouseLeave}
                 >
                   <FolderOpen className="mr-2 h-4 w-4" />
                   {project.name}
@@ -210,7 +189,7 @@ export function CommandBar({ viewModel }: CommandBarProps) {
               ))}
             </CommandGroup>
             
-            <CommandSeparator style={{ margin: '8px 0', borderTop: '1px solid #e5e7eb' }} />
+            <CommandSeparator style={{ margin: '12px 0', borderTop: '1px solid rgba(0, 0, 0, 0.05)' }} />
             
             {/* Workflows */}
             <CommandGroup 
@@ -224,17 +203,12 @@ export function CommandBar({ viewModel }: CommandBarProps) {
                   key={workflow.id}
                   value={workflow.name}
                   onSelect={() => {
-                    console.log('Workflow selected:', workflow.name);
                     viewModel.switchToWorkflow(workflow.id);
                     setOpen(false);
                   }}
-                  style={{
-                    padding: '8px 12px',
-                    borderRadius: '4px',
-                    cursor: 'pointer'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  style={itemStyle}
+                  onMouseEnter={handleMouseEnter}
+                  onMouseLeave={handleMouseLeave}
                 >
                   <FileText className="mr-2 h-4 w-4" />
                   {workflow.name}
@@ -245,7 +219,7 @@ export function CommandBar({ viewModel }: CommandBarProps) {
               ))}
             </CommandGroup>
             
-            <CommandSeparator style={{ margin: '8px 0', borderTop: '1px solid #e5e7eb' }} />
+            <CommandSeparator style={{ margin: '12px 0', borderTop: '1px solid rgba(0, 0, 0, 0.05)' }} />
             
             {/* Widgets */}
             <CommandGroup 
@@ -259,17 +233,12 @@ export function CommandBar({ viewModel }: CommandBarProps) {
                   key={widget.id}
                   value={widget.name || widget.type}
                   onSelect={() => {
-                    console.log('Widget selected:', widget.name);
                     // TODO: Implement focus on widget
                     setOpen(false);
                   }}
-                  style={{
-                    padding: '8px 12px',
-                    borderRadius: '4px',
-                    cursor: 'pointer'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  style={itemStyle}
+                  onMouseEnter={handleMouseEnter}
+                  onMouseLeave={handleMouseLeave}
                 >
                   <Square className="mr-2 h-4 w-4" />
                   {widget.name || widget.type}
@@ -277,7 +246,7 @@ export function CommandBar({ viewModel }: CommandBarProps) {
               ))}
             </CommandGroup>
             
-            <CommandSeparator style={{ margin: '8px 0', borderTop: '1px solid #e5e7eb' }} />
+            <CommandSeparator style={{ margin: '12px 0', borderTop: '1px solid rgba(0, 0, 0, 0.05)' }} />
             
             {/* Settings */}
             <CommandGroup 
@@ -288,17 +257,12 @@ export function CommandBar({ viewModel }: CommandBarProps) {
             >
               <CommandItem
                 onSelect={() => {
-                  console.log('Settings selected');
                   viewModel.openSettings();
                   setOpen(false);
                 }}
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                style={itemStyle}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
               >
                 <Settings className="mr-2 h-4 w-4" />
                 <span>Settings</span>
@@ -306,17 +270,12 @@ export function CommandBar({ viewModel }: CommandBarProps) {
               </CommandItem>
               <CommandItem
                 onSelect={() => {
-                  console.log('About selected');
                   viewModel.openAbout();
                   setOpen(false);
                 }}
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                style={itemStyle}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
               >
                 <Info className="mr-2 h-4 w-4" />
                 <span>About</span>
