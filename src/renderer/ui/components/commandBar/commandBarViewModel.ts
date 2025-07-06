@@ -7,6 +7,8 @@ import { SwitchWorkflowUseCase } from '@/application/useCases/workflowSwitcher/s
 import { OpenApplicationSettingsUseCase } from '@/application/useCases/applicationSettings/openApplicationSettings'
 import { OpenAboutUseCase } from '@/application/useCases/about/openAbout'
 import { ToggleEditModeUseCase } from '@/application/useCases/toggleEditMode'
+import { OpenNewWindowUseCase } from '@/application/useCases/browserWindow/openNewWindow'
+import { ReloadWindowUseCase } from '@/application/useCases/browserWindow/reloadWindow'
 
 type Deps = {
   useAppState: UseAppState
@@ -17,6 +19,8 @@ type Deps = {
   switchWorkflowUseCase: SwitchWorkflowUseCase
   openApplicationSettingsUseCase: OpenApplicationSettingsUseCase
   openAboutUseCase: OpenAboutUseCase
+  openNewWindowUseCase: OpenNewWindowUseCase
+  reloadWindowUseCase: ReloadWindowUseCase
 }
 
 export function createCommandBarViewModelHook({
@@ -28,6 +32,8 @@ export function createCommandBarViewModelHook({
   switchWorkflowUseCase,
   openApplicationSettingsUseCase,
   openAboutUseCase,
+  openNewWindowUseCase,
+  reloadWindowUseCase,
 }: Deps) {
   function useCommandBarViewModel() {
     const [
@@ -102,6 +108,12 @@ export function createCommandBarViewModelHook({
       },
       openAbout: () => {
         openAboutUseCase()
+      },
+      openNewWindow: () => {
+        openNewWindowUseCase()
+      },
+      reloadWindow: () => {
+        reloadWindowUseCase()
       }
     }
   }

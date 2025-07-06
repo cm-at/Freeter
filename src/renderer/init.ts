@@ -60,6 +60,7 @@ import { setTextOnlyIfChanged } from '@common/infra/dataStorage/setTextOnlyIfCha
 import { withJson } from '@common/infra/dataStorage/withJson';
 import { createObjectManager } from '@common/base/objectManager';
 import { copyWidgetDataStorage, createWidgetDataStorage } from '@/infra/dataStorage/widgetDataStorage';
+import { createSyncedWidgetDataStorage } from '@/infra/dataStorage/syncedWidgetDataStorage';
 import { createWorktableViewModelHook } from '@/ui/components/worktable/worktableViewModel';
 import { createAppViewModelHook } from '@/ui/components/app/appViewModel';
 import { createUpdateWidgetCoreSettingsUseCase } from '@/application/useCases/widgetSettings/updateWidgetCoreSettings';
@@ -100,6 +101,10 @@ import { createInitTrayMenuUseCase } from '@/application/useCases/trayMenu/initT
 import { createTrayMenuProvider } from '@/infra/trayMenuProvider/trayMenuProvider';
 import { createClickTrayMenuItemUseCase } from '@/application/useCases/trayMenu/clickTrayMenuItem';
 import { createShowBrowserWindowUseCase } from '@/application/useCases/browserWindow/showBrowserWindow';
+import { createOpenNewWindowUseCase } from '@/application/useCases/browserWindow/openNewWindow';
+import { createReloadWindowUseCase } from '@/application/useCases/browserWindow/reloadWindow';
+import { createSyncStateEntitiesUseCase } from '@/application/useCases/stateSync/syncStateEntities';
+import { createSyncWidgetDataUseCase } from '@/application/useCases/stateSync/syncWidgetData';
 import { createBrowserWindowProvider } from '@/infra/browserWindowProvider/browserWindowProvider';
 import { createAboutComponent } from '@/ui/components/about';
 import { createAboutViewModelHook } from '@/ui/components/about/aboutViewModel';
@@ -263,11 +268,30 @@ async function createUseCases(store: ReturnType<typeof createStore>) {
 
   const getWidgetsInCurrentWorkflowUseCase = createGetWidgetsInCurrentWorkflowUseCase(deps);
 
+  // Widget data cache and sync for multi-window support
+  const widgetDataCache = new Map<string, Map<string, any>>();
+  
+  const syncWidgetDataUseCase = createSyncWidgetDataUseCase({
+    onWidgetDataReceived: async (widgetId: string, key: string, value: any) => {
+      // Update the cache when data is received from other windows
+      if (!widgetDataCache.has(widgetId)) {
+        widgetDataCache.set(widgetId, new Map());
+      }
+      const cache = widgetDataCache.get(widgetId)!;
+      cache.set(key, value);
+    }
+  });
+
   const clipboardProvider = createClipboardProvider();
   const shellProvider = createShellProvider();
   const processProvider = await createProcessProvider();
   const widgetDataStorageManager = createObjectManager(
-    async widgetId => prepareDataStorageForRenderer(createWidgetDataStorage(widgetId)),
+    async widgetId => prepareDataStorageForRenderer(
+      createSyncedWidgetDataStorage(widgetId, {
+        notifyChange: (widgetId, data) => syncWidgetDataUseCase().notifyWidgetDataChange(widgetId, data),
+        widgetDataCache
+      })
+    ),
     copyWidgetDataStorage
   )
   const terminalProvider = createTerminalProvider();
@@ -340,6 +364,11 @@ async function createUseCases(store: ReturnType<typeof createStore>) {
   const saveApplicationSettingsUseCase = createSaveApplicationSettingsUseCase(deps);
   const updateApplicationSettingsUseCase = createUpdateApplicationSettingsUseCase(deps);
 
+  const browserWindow = createBrowserWindowProvider();
+  const showBrowserWindowUseCase = createShowBrowserWindowUseCase({ browserWindow });
+  const openNewWindowUseCase = createOpenNewWindowUseCase({ browserWindow });
+  const reloadWindowUseCase = createReloadWindowUseCase({});
+
   const clickAppMenuItemUseCase = createClickAppMenuItemUseCase();
   const appMenuProvider = createAppMenuProvider({
     clickAppMenuItemUseCase
@@ -357,11 +386,10 @@ async function createUseCases(store: ReturnType<typeof createStore>) {
     openApplicationSettingsUseCase,
     openAboutUseCase,
     openAppManagerUseCase,
-    openProjectManagerUseCase
+    openProjectManagerUseCase,
+    openNewWindowUseCase,
+    reloadWindowUseCase
   });
-
-  const browserWindow = createBrowserWindowProvider();
-  const showBrowserWindowUseCase = createShowBrowserWindowUseCase({ browserWindow });
 
   const clickTrayMenuItemUseCase = createClickTrayMenuItemUseCase();
   const trayMenuProvider = createTrayMenuProvider({
@@ -447,6 +475,53 @@ async function createUseCases(store: ReturnType<typeof createStore>) {
 
   const setExposedApiUseCase = createSetExposedApiUseCase(deps);
 
+  const syncStateEntitiesUseCase = createSyncStateEntitiesUseCase({
+    getProjects: () => store.appStore.get().entities.projects,
+    getWorkflows: () => store.appStore.get().entities.workflows,
+    getWidgets: () => store.appStore.get().entities.widgets,
+    getApps: () => store.appStore.get().entities.apps,
+    setProjects: (projects) => {
+      const state = store.appStore.get();
+      store.appStore.set({
+        ...state,
+        entities: {
+          ...state.entities,
+          projects
+        }
+      });
+    },
+    setWorkflows: (workflows) => {
+      const state = store.appStore.get();
+      store.appStore.set({
+        ...state,
+        entities: {
+          ...state.entities,
+          workflows
+        }
+      });
+    },
+    setWidgets: (widgets) => {
+      const state = store.appStore.get();
+      store.appStore.set({
+        ...state,
+        entities: {
+          ...state.entities,
+          widgets
+        }
+      });
+    },
+    setApps: (apps) => {
+      const state = store.appStore.get();
+      store.appStore.set({
+        ...state,
+        entities: {
+          ...state.entities,
+          apps
+        }
+      });
+    }
+  });
+
   return {
     dragWidgetFromWorktableLayoutUseCase,
     dragOverWorktableLayoutUseCase,
@@ -522,6 +597,8 @@ async function createUseCases(store: ReturnType<typeof createStore>) {
     updateApplicationSettingsUseCase,
 
     showBrowserWindowUseCase,
+    openNewWindowUseCase,
+    reloadWindowUseCase,
 
     openAboutUseCase,
     closeAboutUseCase,
@@ -540,7 +617,9 @@ async function createUseCases(store: ReturnType<typeof createStore>) {
     deactivateWorkflowUseCase,
     initMemSaverUseCase,
 
-    setExposedApiUseCase
+    setExposedApiUseCase,
+    syncStateEntitiesUseCase,
+    syncWidgetDataUseCase
   }
 }
 
@@ -689,12 +768,14 @@ export async function init() {
   const store = createStore();
   const useCases = await createUseCases(store);
 
-  const { initAppMenuUseCase, initMainShortcutUseCase, initTrayMenuUseCase, initMemSaverUseCase } = useCases;
+  const { initAppMenuUseCase, initMainShortcutUseCase, initTrayMenuUseCase, initMemSaverUseCase, syncStateEntitiesUseCase, syncWidgetDataUseCase } = useCases;
   store.appStoreReady.then(_ => {
     initMainShortcutUseCase();
     initAppMenuUseCase();
     initTrayMenuUseCase();
     initMemSaverUseCase();
+    syncStateEntitiesUseCase().startSync();
+    syncWidgetDataUseCase().startSync();
   })
 
   const stateHooks = createUiHooks(store, useCases);

@@ -5,4 +5,5 @@
 
 export interface BrowserWindowProvider {
   show: () => Promise<void>;
+  openNewWindow: () => Promise<void>;
 }

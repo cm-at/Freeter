@@ -11,14 +11,19 @@ import { ChangeEventHandler, useCallback, useEffect, useMemo, useRef, useState }
 import { createContextMenuFactory, textAreaContextId } from '@/widgets/note/contextMenu';
 import { createActionBarItems } from '@/widgets/note/actionBar';
 import { Editor } from 'tiny-markdown-editor';
+import { electronIpcRenderer } from '@/infra/mainApi/mainApi';
+import { ipcStateSyncChannel, IpcStateSyncArgs } from '@common/ipc/channels';
 
 const keyNote = 'note';
 
-function WidgetComp({widgetApi, settings}: WidgetReactComponentProps<Settings>) {
+function WidgetComp({id, widgetApi, settings}: WidgetReactComponentProps<Settings>) {
   const {updateActionBar, setContextMenuFactory, dataStorage} = widgetApi;
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const loadedNote = useRef('');
   const [isLoaded, setIsLoaded] = useState(false);
+  const [noteContent, setNoteContent] = useState('');
+  const tinyMDERef = useRef<Editor | null>(null);
+  const widgetId = useRef(id);
 
   useEffect(() => {
     if (isLoaded) {
@@ -30,11 +35,13 @@ function WidgetComp({widgetApi, settings}: WidgetReactComponentProps<Settings>) 
   const saveNote = useMemo(() => debounce((note: string) => dataStorage.setText(keyNote, note), 3000), [dataStorage]);
   const updNote = useCallback((note: string) => {
     loadedNote.current = note;
+    setNoteContent(note);
     saveNote(note);
   }, [saveNote])
 
   const loadNote = useCallback(async function () {
     loadedNote.current = await dataStorage.getText(keyNote) || '';
+    setNoteContent(loadedNote.current);
     setIsLoaded(true);
   }, [dataStorage]);
 
@@ -42,6 +49,31 @@ function WidgetComp({widgetApi, settings}: WidgetReactComponentProps<Settings>) 
     const newNote = e.target.value;
     updNote(newNote)
   }, [updNote])
+
+  // Listen for sync updates from other windows
+  useEffect(() => {
+    const handleSync = (_event: any, args: IpcStateSyncArgs) => {
+      if (args.type === 'widget-data-update' && args.payload.widgetId === widgetId.current) {
+        const noteValue = args.payload.widgetData?.[keyNote];
+        if (noteValue !== undefined && noteValue !== loadedNote.current) {
+          loadedNote.current = noteValue;
+          setNoteContent(noteValue);
+          
+          // Update the textarea or TinyMDE editor
+          if (textAreaRef.current && !settings.markdown) {
+            textAreaRef.current.value = noteValue;
+          } else if (tinyMDERef.current && settings.markdown) {
+            tinyMDERef.current.setContent(noteValue);
+          }
+        }
+      }
+    };
+
+    electronIpcRenderer.on(ipcStateSyncChannel, handleSync);
+    return () => {
+      electronIpcRenderer.removeListener(ipcStateSyncChannel, handleSync);
+    };
+  }, [settings.markdown]);
 
   useEffect(() => {
     loadNote();
@@ -53,7 +85,9 @@ function WidgetComp({widgetApi, settings}: WidgetReactComponentProps<Settings>) 
         const tinyMDE = new Editor({textarea: textAreaRef.current});
         tinyMDE.addEventListener('change', (e) => updNote(e.content));
         (textAreaRef.current.nextSibling as HTMLElement).spellcheck = settings.spellCheck;
+        tinyMDERef.current = tinyMDE;
       } else {
+        tinyMDERef.current = null;
         loadedNote.current = textAreaRef.current.value;
         Array.from(textAreaRef.current.parentElement?.children || [])
           .filter(child => child.classList.contains('TinyMDE'))
@@ -68,7 +102,7 @@ function WidgetComp({widgetApi, settings}: WidgetReactComponentProps<Settings>) 
         key={settings.markdown?'md':undefined} // resets element after disabling markdown
         ref={textAreaRef}
         className={styles['textarea']}
-        defaultValue={loadedNote.current}
+        defaultValue={noteContent}
         onChange={handleChange}
         placeholder='Write a note here'
         data-widget-context={textAreaContextId}

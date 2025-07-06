@@ -59,6 +59,7 @@ import { createSetTrayMenuUseCase } from '@/application/useCases/tray/setTrayMen
 import { createTrayMenuControllers } from '@/controllers/trayMenu';
 import { createBrowserWindowControllers } from '@/controllers/browserWindow';
 import { createShowBrowserWindowUseCase } from '@/application/useCases/browserWindow/showBrowserWindow';
+import { createOpenNewWindowUseCase } from '@/application/useCases/browserWindow/openNewWindow';
 import { createShowOpenFileDialogUseCase } from '@/application/useCases/dialog/showOpenFileDialog';
 import { createShowSaveFileDialogUseCase } from '@/application/useCases/dialog/showSaveFileDialog';
 import { createShowOpenDirDialogUseCase } from '@/application/useCases/dialog/showOpenDirDialog';
@@ -69,22 +70,44 @@ import { createChildProcessProvider } from '@/infra/childProcessProvider/childPr
 import { createOpenPathUseCase } from '@/application/useCases/shell/openPath';
 import { createCopyWidgetDataStorageUseCase } from '@/application/useCases/widgetDataStorage/copyWidgetDataStorage';
 import { createOpenAppUseCase } from '@/application/useCases/shell/openApp';
+import { createStateSyncControllers } from '@/controllers/stateSync';
 
-let appWindow: BrowserWindow | null = null; // ref to the app window
+let appWindow: BrowserWindow | null = null; // ref to the first app window
+const allWindows: Map<number, BrowserWindow> = new Map(); // track all windows by ID
+let windowCounter = 0;
+let isQuittingApp = false;
 
 if (!app.requestSingleInstanceLock()) {
   // there is another instance of the app running
   app.quit();
 } {
   app.on('second-instance', (_event, _commandLine, _workingDirectory, _additionalData) => {
-    if (appWindow) {
-      if (!appWindow.isVisible()) {
-        appWindow.show();
+    // Show and focus any visible window, prioritize the first window
+    let visibleWindow: BrowserWindow | null = null;
+    for (const [_, window] of allWindows) {
+      if (window && !window.isMinimized()) {
+        visibleWindow = window;
+        break;
       }
-      if (appWindow.isMinimized()) {
-        appWindow.restore()
+    }
+    visibleWindow = visibleWindow || appWindow;
+    
+    if (visibleWindow) {
+      if (!visibleWindow.isVisible()) {
+        visibleWindow.show();
       }
-      appWindow.focus()
+      if (visibleWindow.isMinimized()) {
+        visibleWindow.restore()
+      }
+      visibleWindow.focus()
+    } else if (allWindows.size > 0) {
+      // No visible windows, show the first one
+      const firstWindow = allWindows.values().next().value;
+      if (firstWindow) {
+        firstWindow.show();
+        firstWindow.restore();
+        firstWindow.focus();
+      }
     }
   })
 
@@ -113,6 +136,10 @@ if (!app.requestSingleInstanceLock()) {
   //    implementing the UA change on per-session basis (see point 2).
   const uaOriginal = app.userAgentFallback;
   app.userAgentFallback = app.userAgentFallback.replace(/[Ee]lectron.*?\s/g, '');
+
+  app.on('before-quit', () => {
+    isQuittingApp = true;
+  });
 
   app.on('will-quit', () => {
     // Unregister global shortcuts
@@ -177,6 +204,97 @@ if (!app.requestSingleInstanceLock()) {
 
     const openAppUseCase = createOpenAppUseCase({ childProcessProvider, processProvider })
 
+    // Function to create a new window
+    const createNewWindow = async (): Promise<BrowserWindow> => {
+      return new Promise(async (resolve) => {
+        const windowId = ++windowCounter;
+        const windowKey = windowId === 1 ? 'state.json' : `state-window-${windowId}.json`;
+        
+        const windowDataStorage = windowId === 1 
+          ? appDataStorage 
+          : await createFileDataStorage('string', join(app.getPath('appData'), 'freeter2', 'freeter-data', windowKey));
+        
+        const [windowStore] = createWindowStore({
+          stateStorage: createWindowStateStorage(
+            setTextOnlyIfChanged(withJson(windowDataStorage))
+          )
+        }, {
+          h: 700,
+          w: 1200,
+          x: 100 + (allWindows.size * 30),
+          y: 100 + (allWindows.size * 30),
+          isFull: false,
+          isMaxi: false,
+          isMini: false
+        }, () => {
+          const getWindowStateUseCase = createGetWindowStateUseCase({ windowStore })
+          const setWindowStateUseCase = createSetWindowStateUseCase({ windowStore })
+          
+          const url = isDevMode ? 'http://localhost:4005' : `${schemeFreeterFile}://${hostFreeterApp}/index.html`;
+          
+          const newWindow = createRendererWindow(
+            `${__dirname}/preload.js`,
+            url,
+            isLinux ? join(app.getAppPath(), 'assets', 'app-icons', '256.png') : undefined,
+            uaOriginal,
+            {
+              getWindowStateUseCase,
+              setWindowStateUseCase
+            },
+            {
+              devTools: isDevMode,
+            }
+          );
+          
+          // Track the new window
+          allWindows.set(windowId, newWindow);
+          
+          // Override the default close behavior for multi-window support
+          const electronWindow = newWindow as any;
+          electronWindow.removeAllListeners('close');
+          electronWindow.on('close', (e: any) => {
+            if (allWindows.size > 1) {
+              // Multiple windows - allow this one to close
+              // The window will be removed from tracking in the 'closed' event
+            } else {
+              // Last window - hide instead of close (unless quitting)
+              if (!isQuittingApp) {
+                electronWindow.hide();
+                e.preventDefault();
+              }
+            }
+          });
+          
+          // Handle window closed
+          electronWindow.on('closed', () => {
+            allWindows.delete(windowId);
+            if (windowId === 1 && appWindow === newWindow) {
+              appWindow = null;
+            }
+          });
+          
+          // Set up child window handlers if not the first window
+          if (windowId > 1) {
+            app.on('browser-window-created', (_e, win) => {
+              // Disable menu in child windows of this window
+              if ((win as any).getParentWindow && (win as any).getParentWindow() === newWindow) {
+                win.removeMenu();
+                win.setAlwaysOnTop(false);
+                
+                win.on('closed', () => {
+                  newWindow.focus();
+                });
+              }
+            });
+          }
+          
+          resolve(newWindow);
+        });
+      });
+    };
+
+    const openNewWindowUseCase = createOpenNewWindowUseCase({ createNewWindow });
+
     registerControllers(ipcMain, [
       ...createAppDataStorageControllers({ getTextFromAppDataStorageUseCase, setTextInAppDataStorageUseCase }),
       ...createWidgetDataStorageControllers({
@@ -200,62 +318,16 @@ if (!app.requestSingleInstanceLock()) {
       ...createAppMenuControllers({ setAppMenuUseCase, setAppMenuAutoHideUseCase }),
       ...createGlobalShortcutControllers({ setMainShortcutUseCase }),
       ...createTrayMenuControllers({ setTrayMenuUseCase }),
-      ...createBrowserWindowControllers({ showBrowserWindowUseCase }),
-      ...createTerminalControllers({ execCmdLinesInTerminalUseCase })
+      ...createBrowserWindowControllers({ showBrowserWindowUseCase, openNewWindowUseCase }),
+      ...createTerminalControllers({ execCmdLinesInTerminalUseCase }),
+      ...createStateSyncControllers({ getAllWindows: () => allWindows })
     ])
 
-    const [windowStore] = createWindowStore({
-      stateStorage: createWindowStateStorage(
-        setTextOnlyIfChanged(withJson(appDataStorage))
-      )
-    }, {
-      h: 0,
-      w: 0,
-      x: 0,
-      y: 0,
-      isFull: false,
-      isMaxi: false,
-      isMini: false
-    }, () => {
-      const getWindowStateUseCase = createGetWindowStateUseCase({ windowStore })
-      const setWindowStateUseCase = createSetWindowStateUseCase({ windowStore })
-      
-      const url = isDevMode ? 'http://localhost:4005' : `${schemeFreeterFile}://${hostFreeterApp}/index.html`;
-      console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> LOADING URL: ', url);
-
-      appWindow = createRendererWindow(
-        `${__dirname}/preload.js`,
-        url,
-        isLinux ? join(app.getAppPath(), 'assets', 'app-icons', '256.png') : undefined,
-        uaOriginal,
-        {
-          getWindowStateUseCase,
-          setWindowStateUseCase
-        },
-        {
-          devTools: isDevMode,
-        }
-      )
-
-      app.on('browser-window-created', (_e, win) => {
-        // Disable menu in child windows
-        if (win !== appWindow) {
-          win.removeMenu();
-          
-          // Ensure child windows don't block the main window
-          win.setAlwaysOnTop(false);
-          
-          // When child window is closed, focus back to main window
-          win.on('closed', () => {
-            if (appWindow) {
-              appWindow.focus();
-            }
-          });
-        }
-      });
-
+    // Create the first window
+    createNewWindow().then((firstWindow) => {
+      appWindow = firstWindow;
       initTrayUseCase(appWindow);
-    })
+    });
   });
 
 }

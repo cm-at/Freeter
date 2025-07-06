@@ -120,6 +120,22 @@ export function createRendererWindow(
     win.webContents.setBackgroundThrottling(false);
   });
 
+  // Additional black screen prevention
+  win.webContents.on('did-finish-load', () => {
+    // Ensure the window is properly rendered after load
+    win.webContents.setVisualZoomLevelLimits(1, 1);
+    win.webContents.setBackgroundThrottling(false);
+  });
+
+  // Handle renderer crashes
+  win.webContents.on('render-process-gone', (event, details) => {
+    console.error('Renderer process gone:', details);
+    if (details.reason === 'crashed') {
+      // Reload the window on crash
+      win.reload();
+    }
+  });
+
   win.on('resize', winStateUpdateHandler);
   win.on('move', winStateUpdateHandler);
   win.on('minimize', winStateUpdateHandler);

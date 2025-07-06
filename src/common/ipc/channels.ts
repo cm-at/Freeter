@@ -123,6 +123,30 @@ export const ipcShowBrowserWindowChannel = makeIpcChannelName('show-browser-wind
 export type IpcShowBrowserWindowArgs = [];
 export type IpcShowBrowserWindowRes = void;
 
+export const ipcOpenNewWindowChannel = makeIpcChannelName('open-new-window');
+export type IpcOpenNewWindowArgs = [];
+export type IpcOpenNewWindowRes = void;
+
+export const ipcReloadWindowChannel = makeIpcChannelName('reload-window');
+export type IpcReloadWindowArgs = [];
+export type IpcReloadWindowRes = void;
+
+export const ipcStateSyncChannel = makeIpcChannelName('state-sync');
+export type IpcStateSyncArgs = {
+  type: 'entities-update' | 'widget-data-update';
+  payload: {
+    projects?: any;
+    workflows?: any;
+    widgets?: any;
+    apps?: any;
+    widgetId?: string;
+    widgetData?: any;
+  };
+  sourceWindowId: number;
+  timestamp: number;
+};
+export type IpcStateSyncRes = void;
+
 
 export const ipcExecCmdLinesInTerminalChannel = makeIpcChannelName('exec-cmd-lines-in-terminal');
 export type IpcExecCmdLinesInTerminalArgs = [cmdLines: ReadonlyArray<string>, cwd?: string];

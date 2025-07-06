@@ -18,6 +18,8 @@ import { EditTogglePos, ProjectSwitcherPos } from '@/base/state/ui';
 import { ToggleTopBarUseCase } from '@/application/useCases/toggleTopBar';
 import { SetProjectSwitcherPositionUseCase } from '@/application/useCases/projectSwitcher/setProjectSwitcherPosition';
 import { SetEditTogglePositionUseCase } from '@/application/useCases/setEditTogglePosition';
+import { OpenNewWindowUseCase } from '@/application/useCases/browserWindow/openNewWindow';
+import { ReloadWindowUseCase } from '@/application/useCases/browserWindow/reloadWindow';
 
 const urlDownload = 'https://freeter.io/v2/download';
 const urlTwitter = 'https://twitter.com/FreeterApp';
@@ -39,6 +41,8 @@ type Deps = {
   openAboutUseCase: OpenAboutUseCase;
   openProjectManagerUseCase: OpenProjectManagerUseCase;
   openAppManagerUseCase: OpenAppManagerUseCase;
+  openNewWindowUseCase: OpenNewWindowUseCase;
+  reloadWindowUseCase: ReloadWindowUseCase;
 }
 
 
@@ -56,6 +60,8 @@ export function createInitAppMenuUseCase({
   openAboutUseCase,
   openProjectManagerUseCase,
   openAppManagerUseCase,
+  openNewWindowUseCase,
+  reloadWindowUseCase,
 }: Deps) {
   const { isMac, isDevMode } = processProvider.getProcessInfo();
 
@@ -67,6 +73,18 @@ export function createInitAppMenuUseCase({
     accelerator: 'CmdOrCtrl+,',
     doAction: async () => openApplicationSettingsUseCase(),
     label: 'Settings'
+  };
+
+  const itemNewWindow: MenuItem = {
+    accelerator: 'CmdOrCtrl+Shift+N',
+    doAction: async () => openNewWindowUseCase(),
+    label: 'New Window'
+  };
+
+  const itemReload: MenuItem = {
+    accelerator: 'CmdOrCtrl+R',
+    doAction: async () => reloadWindowUseCase(),
+    label: 'Reload'
   };
 
   const itemAbout: MenuItem = {
@@ -90,6 +108,8 @@ export function createInitAppMenuUseCase({
       itemSeparator,
       itemSettings,
       itemSeparator,
+      itemNewWindow,
+      itemSeparator,
       itemCheckUpdates,
       itemSeparator,
       { role: 'hide' },
@@ -103,6 +123,8 @@ export function createInitAppMenuUseCase({
   const menuFile: MenuItem = {
     label: '&File',
     submenu: [
+      itemNewWindow,
+      itemSeparator,
       itemSettings,
       itemSeparator,
       itemQuit
@@ -144,6 +166,8 @@ export function createInitAppMenuUseCase({
   ) => MenuItem = (menuBar, topBar, prjSwitcherPos, editTogglePos) => ({
     label: '&View',
     submenu: [
+      itemReload,
+      itemSeparator,
       {
         label: 'Appearance',
         submenu: [

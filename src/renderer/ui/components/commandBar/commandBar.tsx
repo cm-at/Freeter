@@ -26,6 +26,8 @@ import {
   Square,
   Info,
   Link,
+  ExternalLink,
+  RefreshCw,
 } from "lucide-react"
 
 export interface CommandBarProps {
@@ -40,6 +42,8 @@ export interface CommandBarProps {
     switchToWorkflow: (workflowId: string) => void
     openSettings: () => void
     openAbout: () => void
+    openNewWindow: () => void
+    reloadWindow: () => void
   }
 }
 
@@ -75,6 +79,26 @@ export function CommandBar({ viewModel }: CommandBarProps) {
             
             {/* Quick Actions */}
             <CommandGroup heading="Quick Actions">
+              <CommandItem
+                onSelect={() => {
+                  viewModel.openNewWindow();
+                  setOpen(false);
+                }}
+              >
+                <ExternalLink className="mr-2 h-4 w-4" style={iconStyle} />
+                <span>New Window</span>
+                <CommandShortcut>⌘⇧N</CommandShortcut>
+              </CommandItem>
+              <CommandItem
+                onSelect={() => {
+                  viewModel.reloadWindow();
+                  setOpen(false);
+                }}
+              >
+                <RefreshCw className="mr-2 h-4 w-4" style={iconStyle} />
+                <span>Reload App</span>
+                <CommandShortcut>⌘R</CommandShortcut>
+              </CommandItem>
               <CommandItem
                 onSelect={() => {
                   viewModel.toggleEditMode();

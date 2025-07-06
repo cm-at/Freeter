@@ -14,10 +14,12 @@ import clsx from 'clsx';
 import { addItem, deleteItem, editItem, markComplete, markIncomplete } from '@/widgets/to-do-list/actions';
 import { ActiveItemEditorState, ToDoListItem, ToDoListState, maxTextLength } from '@/widgets/to-do-list/state';
 import { focusItemInput, scrollToItemInput, selectAllInItemInput } from '@/widgets/to-do-list/dom';
+import { electronIpcRenderer } from '@/infra/mainApi/mainApi';
+import { ipcStateSyncChannel, IpcStateSyncArgs } from '@common/ipc/channels';
 
 const dataKey = 'todo';
 
-function WidgetComp({widgetApi, settings}: WidgetReactComponentProps<Settings>) {
+function WidgetComp({id, widgetApi, settings}: WidgetReactComponentProps<Settings>) {
   const addItemTopInputRef = useRef<HTMLInputElement>(null);
   const addItemBottomInputRef = useRef<HTMLInputElement>(null);
   const editItemInputRef = useRef<HTMLInputElement>(null);
@@ -32,11 +34,15 @@ function WidgetComp({widgetApi, settings}: WidgetReactComponentProps<Settings>) 
     draggingItemId: number | null;
     draggingOverItemId: number | null;
   } | null>(null);
-
+  const widgetId = useRef(id);
+  const lastSyncTimestamp = useRef(0);
 
   const getToDoList = useCallback(() => toDoList, [toDoList]);
 
-  const saveData = useMemo(() => debounce((data: ToDoListState) => dataStorage.setJson(dataKey, data), 3000), [dataStorage]);
+  const saveData = useMemo(() => debounce((data: ToDoListState) => {
+    lastSyncTimestamp.current = Date.now();
+    dataStorage.setJson(dataKey, data);
+  }, 3000), [dataStorage]);
 
   const loadData = useCallback(async function () {
     const loadedData = await dataStorage.getJson(dataKey) as ToDoListState|undefined;
@@ -55,6 +61,37 @@ function WidgetComp({widgetApi, settings}: WidgetReactComponentProps<Settings>) 
     }
     setIsLoaded(true);
   }, [dataStorage]);
+
+  // Listen for sync updates from other windows
+  useEffect(() => {
+    const handleSync = (_event: any, args: IpcStateSyncArgs) => {
+      if (args.type === 'widget-data-update' && args.payload.widgetId === widgetId.current) {
+        const todoData = args.payload.widgetData?.[dataKey];
+        if (todoData && args.timestamp > lastSyncTimestamp.current) {
+          // Validate the incoming data
+          if (typeof todoData === 'object' && todoData && Array.isArray(todoData.items) && typeof todoData.nextItemId === 'number') {
+            const sanitizedData: ToDoListState = {
+              items: todoData.items.map(({id, text, isDone }: any) => {
+                if(typeof id === 'number' && typeof text === 'string' && typeof isDone === 'boolean') {
+                  return { id, text, isDone }
+                } else {
+                  return undefined;
+                }
+              }).filter((item: any) => item) as ToDoListItem[],
+              nextItemId: todoData.nextItemId
+            }
+            lastSyncTimestamp.current = args.timestamp;
+            setToDoList(sanitizedData);
+          }
+        }
+      }
+    };
+
+    electronIpcRenderer.on(ipcStateSyncChannel, handleSync);
+    return () => {
+      electronIpcRenderer.removeListener(ipcStateSyncChannel, handleSync);
+    };
+  }, []);
 
   useEffect(() => {
     if(!isLoaded) {

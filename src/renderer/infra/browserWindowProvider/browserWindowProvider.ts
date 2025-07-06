@@ -3,7 +3,7 @@
  * GNU General Public License v3.0 or later (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
  */
 
-import { IpcShowBrowserWindowArgs, IpcShowBrowserWindowRes, ipcShowBrowserWindowChannel } from '@common/ipc/channels';
+import { IpcShowBrowserWindowArgs, IpcShowBrowserWindowRes, ipcShowBrowserWindowChannel, IpcOpenNewWindowArgs, IpcOpenNewWindowRes, ipcOpenNewWindowChannel } from '@common/ipc/channels';
 import { BrowserWindowProvider } from '@/application/interfaces/browserWindowProvider';
 import { electronIpcRenderer } from '@/infra/mainApi/mainApi';
 
@@ -12,6 +12,11 @@ export function createBrowserWindowProvider(): BrowserWindowProvider {
     show: async () => {
       electronIpcRenderer.invoke<IpcShowBrowserWindowArgs, IpcShowBrowserWindowRes>(
         ipcShowBrowserWindowChannel
+      )
+    },
+    openNewWindow: async () => {
+      electronIpcRenderer.invoke<IpcOpenNewWindowArgs, IpcOpenNewWindowRes>(
+        ipcOpenNewWindowChannel
       )
     }
   }

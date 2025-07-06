@@ -4,19 +4,23 @@
  */
 
 import { Controller } from '@/controllers/controller';
-import { IpcShowBrowserWindowArgs, ipcShowBrowserWindowChannel, IpcShowBrowserWindowRes } from '@common/ipc/channels';
+import { IpcShowBrowserWindowArgs, ipcShowBrowserWindowChannel, IpcShowBrowserWindowRes, IpcOpenNewWindowArgs, ipcOpenNewWindowChannel, IpcOpenNewWindowRes } from '@common/ipc/channels';
 import { ShowBrowserWindowUseCase } from '@/application/useCases/browserWindow/showBrowserWindow';
+import { OpenNewWindowUseCase } from '@/application/useCases/browserWindow/openNewWindow';
 
 type Deps = {
   showBrowserWindowUseCase: ShowBrowserWindowUseCase;
+  openNewWindowUseCase?: OpenNewWindowUseCase;
 }
 
 export function createBrowserWindowControllers({
   showBrowserWindowUseCase,
+  openNewWindowUseCase,
 }: Deps): [
     Controller<IpcShowBrowserWindowArgs, IpcShowBrowserWindowRes>,
+    ...Array<Controller<IpcOpenNewWindowArgs, IpcOpenNewWindowRes>>
   ] {
-  return [{
+  const controllers: Array<Controller<any, any>> = [{
     channel: ipcShowBrowserWindowChannel,
     handle: async (event) => {
       const win = event.getSenderBrowserWindow();
@@ -24,5 +28,16 @@ export function createBrowserWindowControllers({
         showBrowserWindowUseCase(win);
       }
     }
-  }]
+  }];
+
+  if (openNewWindowUseCase) {
+    controllers.push({
+      channel: ipcOpenNewWindowChannel,
+      handle: async () => {
+        await openNewWindowUseCase();
+      }
+    });
+  }
+
+  return controllers as any;
 }
