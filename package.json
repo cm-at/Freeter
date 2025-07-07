@@ -106,10 +106,12 @@
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.14",
     "@radix-ui/react-slot": "^1.2.3",
+    "@types/marked": "^5.0.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.0",
     "cmdk": "^1.1.1",
     "lucide-react": "^0.525.0",
+    "marked": "^16.0.0",
     "node-pty": "https://github.com/microsoft/node-pty.git",
     "tailwind-merge": "^3.3.1",
     "tailwindcss": "^4.1.11",

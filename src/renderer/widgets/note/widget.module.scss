@@ -13,6 +13,144 @@
   bottom: 0;
 }
 
+.preview-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow-y: auto;
+  background-color: var(--freeter-textareaBackground);
+  color: var(--freeter-textareaColor);
+  padding: 12px;
+  cursor: text;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.preview {
+  max-width: 100%;
+  
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 0;
+    margin-bottom: 0.5em;
+    font-weight: 600;
+  }
+  
+  h1 { font-size: 2em; }
+  h2 { font-size: 1.5em; }
+  h3 { font-size: 1.25em; }
+  h4 { font-size: 1em; }
+  h5 { font-size: 0.875em; }
+  h6 { font-size: 0.85em; }
+  
+  p {
+    margin-top: 0;
+    margin-bottom: 1em;
+  }
+  
+  ul, ol {
+    margin-top: 0;
+    margin-bottom: 1em;
+    padding-left: 2em;
+  }
+  
+  li {
+    margin-bottom: 0.25em;
+  }
+  
+  blockquote {
+    margin: 0 0 1em 0;
+    padding-left: 1em;
+    border-left: 4px solid var(--freeter-textareaBorder);
+    font-style: italic;
+    color: var(--freeter-textareaColor);
+    opacity: 0.8;
+  }
+  
+  code {
+    background-color: var(--freeter-widgetBackground);
+    padding: 0.2em 0.4em;
+    border-radius: 3px;
+    font-family: monospace;
+    font-size: 0.9em;
+  }
+  
+  pre {
+    background-color: var(--freeter-widgetBackground);
+    padding: 1em;
+    border-radius: 3px;
+    overflow-x: auto;
+    margin: 0 0 1em 0;
+    
+    code {
+      background-color: transparent;
+      padding: 0;
+    }
+  }
+  
+  a {
+    color: var(--freeter-componentColor60);
+    text-decoration: underline;
+    
+    &:hover {
+      opacity: 0.8;
+    }
+  }
+  
+  hr {
+    border: 0;
+    height: 1px;
+    background: var(--freeter-textareaBorder);
+    margin: 1em 0;
+  }
+  
+  table {
+    border-collapse: collapse;
+    margin-bottom: 1em;
+    width: 100%;
+  }
+  
+  table th,
+  table td {
+    padding: 0.5em;
+    border: 1px solid var(--freeter-textareaBorder);
+  }
+  
+  table th {
+    background-color: var(--freeter-widgetBackground);
+    font-weight: 600;
+  }
+  
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+  
+  :global(.empty) {
+    opacity: 0.5;
+    font-style: italic;
+  }
+}
+
+.preview-error {
+  padding: 20px;
+  background-color: var(--freeter-error10, rgba(255, 0, 0, 0.1));
+  border: 1px solid var(--freeter-error60, rgba(255, 0, 0, 0.6));
+  border-radius: 4px;
+  
+  h3 {
+    margin: 0 0 10px 0;
+    color: var(--freeter-error60, #ff0000);
+    font-size: 16px;
+  }
+  
+  p {
+    margin: 0;
+    color: var(--freeter-textareaColor);
+  }
+}
+
 :global {
   .TinyMDE {
     position: absolute;

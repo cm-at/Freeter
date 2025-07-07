@@ -5,10 +5,10 @@
 
 import { Controller } from '@/controllers/controller';
 import { IpcStateSyncArgs, ipcStateSyncChannel } from '@common/ipc/channels';
-import { BrowserWindow as ElectronBrowserWindow, WebContents as ElectronWebContents } from 'electron';
+import { BrowserWindow } from 'electron';
 
 type Deps = {
-  getAllWindows: () => Map<number, ElectronBrowserWindow>;
+  getAllWindows: () => Map<number, BrowserWindow>;
 }
 
 export function createStateSyncControllers({
@@ -17,7 +17,7 @@ export function createStateSyncControllers({
   return [{
     channel: ipcStateSyncChannel,
     handle: async (event, args) => {
-      const sourceWindow = ElectronBrowserWindow.fromWebContents(event.sender as unknown as ElectronWebContents);
+      const sourceWindow = BrowserWindow.fromWebContents(event.sender as any);
       const allWindows = getAllWindows();
       
       // Broadcast the state change to all other windows

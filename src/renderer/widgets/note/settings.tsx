@@ -12,7 +12,7 @@ export interface Settings {
 
 export const createSettingsState: CreateSettingsState<Settings> = (settings) => ({
   spellCheck: typeof settings.spellCheck === 'boolean' ? settings.spellCheck : false,
-  markdown: typeof settings.markdown === 'boolean' ? settings.markdown : false,
+  markdown: typeof settings.markdown === 'boolean' ? settings.markdown : true,
 })
 
 function SettingsEditorComp({settings, settingsApi}: SettingsEditorReactComponentProps<Settings>) {
