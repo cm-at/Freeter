@@ -13,14 +13,15 @@ type Deps = {
   openNewWindowUseCase?: OpenNewWindowUseCase;
 }
 
+type BrowserWindowController = 
+  | Controller<IpcShowBrowserWindowArgs, IpcShowBrowserWindowRes>
+  | Controller<IpcOpenNewWindowArgs, IpcOpenNewWindowRes>;
+
 export function createBrowserWindowControllers({
   showBrowserWindowUseCase,
   openNewWindowUseCase,
-}: Deps): [
-    Controller<IpcShowBrowserWindowArgs, IpcShowBrowserWindowRes>,
-    ...Array<Controller<IpcOpenNewWindowArgs, IpcOpenNewWindowRes>>
-  ] {
-  const controllers: Array<Controller<any, any>> = [{
+}: Deps): BrowserWindowController[] {
+  const controllers: BrowserWindowController[] = [{
     channel: ipcShowBrowserWindowChannel,
     handle: async (event) => {
       const win = event.getSenderBrowserWindow();
@@ -39,5 +40,5 @@ export function createBrowserWindowControllers({
     });
   }
 
-  return controllers as any;
+  return controllers;
 }

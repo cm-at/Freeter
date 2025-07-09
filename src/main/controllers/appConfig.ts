@@ -28,10 +28,7 @@ let cachedPopupDomains: IpcGetPopupDomainsRes = DEFAULT_POPUP_PATTERNS;
 export function createAppConfigControllers(): Controller<IpcGetPopupDomainsArgs, IpcGetPopupDomainsRes>[] {
   return [{
     channel: ipcGetPopupDomainsChannel,
-    handle: async () => {
-      // For now, return the defaults - we can enhance this later to sync with renderer
-      return cachedPopupDomains;
-    }
+    handle: async () => cachedPopupDomains
   }];
 }
 

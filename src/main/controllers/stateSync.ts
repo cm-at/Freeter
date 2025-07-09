@@ -5,7 +5,8 @@
 
 import { Controller } from '@/controllers/controller';
 import { IpcStateSyncArgs, ipcStateSyncChannel } from '@common/ipc/channels';
-import { BrowserWindow } from 'electron';
+import { BrowserWindow } from '@/application/interfaces/browserWindow';
+import { BrowserWindow as ElectronBrowserWindow } from 'electron';
 import { updatePopupDomains } from './appConfig';
 
 type Deps = {
@@ -18,7 +19,7 @@ export function createStateSyncControllers({
   return [{
     channel: ipcStateSyncChannel,
     handle: async (event, args) => {
-      const sourceWindow = BrowserWindow.fromWebContents(event.sender as any);
+      const sourceWindow = ElectronBrowserWindow.fromWebContents(event.sender as any);
       const allWindows = getAllWindows();
       
       // Handle app config updates
@@ -27,9 +28,10 @@ export function createStateSyncControllers({
       }
       
       // Broadcast the state change to all other windows
-      for (const [windowId, window] of allWindows) {
-        if (window !== sourceWindow && !window.isDestroyed()) {
-          window.webContents.send(ipcStateSyncChannel, args);
+      for (const [, window] of allWindows) {
+        const electronWindow = window as unknown as ElectronBrowserWindow;
+        if (electronWindow !== sourceWindow && !electronWindow.isDestroyed()) {
+          electronWindow.webContents.send(ipcStateSyncChannel, args);
         }
       }
     }

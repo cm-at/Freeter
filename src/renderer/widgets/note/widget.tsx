@@ -31,11 +31,46 @@ function WidgetComp({id, widgetApi, settings}: WidgetReactComponentProps<Setting
   const loadedNote = useRef('');
   const [isLoaded, setIsLoaded] = useState(false);
   const [noteContent, setNoteContent] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(true); // Start in edit mode by default
   const [markdownPreview, setMarkdownPreview] = useState('');
   const [markdownError, setMarkdownError] = useState<string | null>(null);
   const tinyMDERef = useRef<Editor | null>(null);
   const widgetId = useRef(id);
+  const isUpdatingRef = useRef(false);
+  const lastKeyPressRef = useRef<number>(0);
+
+  // Throttle markdown parsing to avoid excessive memory usage
+  const parseMarkdown = useMemo(() => 
+    debounce(async (content: string) => {
+      if (!settings.markdown || !content) {
+        setMarkdownPreview('');
+        return;
+      }
+      
+      try {
+        const html = await marked(content);
+        setMarkdownPreview(html);
+        setMarkdownError(null);
+      } catch (error) {
+        setMarkdownError(error instanceof Error ? error.message : 'Failed to parse markdown');
+        setMarkdownPreview('');
+      }
+    }, 500), // Increased debounce time to reduce parsing frequency
+    [settings.markdown]
+  );
+
+  // Update refs when values change
+  useEffect(() => {
+    // settingsRef.current = settings; // Removed as per new_code
+  }, [settings]);
+
+  useEffect(() => {
+    // noteContentRef.current = noteContent; // Removed as per new_code
+  }, [noteContent]);
+
+  useEffect(() => {
+    // markdownPreviewRef.current = markdownPreview; // Removed as per new_code
+  }, [markdownPreview]);
 
   useEffect(() => {
     if (isLoaded) {
@@ -46,21 +81,19 @@ function WidgetComp({id, widgetApi, settings}: WidgetReactComponentProps<Setting
 
   const saveNote = useMemo(() => debounce((note: string) => dataStorage.setText(keyNote, note), 3000), [dataStorage]);
   const updNote = useCallback(async (note: string) => {
+    isUpdatingRef.current = true;
     loadedNote.current = note;
     setNoteContent(note);
     saveNote(note);
     
-    // Update preview if in markdown mode
-    if (settings.markdown) {
-      try {
-        const html = await marked(note);
-        setMarkdownPreview(html);
-        setMarkdownError(null);
-      } catch (error) {
-        setMarkdownError(error instanceof Error ? error.message : 'Failed to parse markdown');
-      }
-    }
-  }, [saveNote, settings.markdown])
+    // Throttled markdown parsing
+    parseMarkdown(note);
+    
+    // Reset updating flag after a short delay
+    setTimeout(() => {
+      isUpdatingRef.current = false;
+    }, 50);
+  }, [saveNote, parseMarkdown])
 
   const loadNote = useCallback(async function () {
     loadedNote.current = await dataStorage.getText(keyNote) || '';
@@ -86,19 +119,39 @@ function WidgetComp({id, widgetApi, settings}: WidgetReactComponentProps<Setting
   }, [updNote])
 
   const handleFocus = useCallback(() => {
-    console.log('Note focus - entering edit mode');
     setIsEditing(true);
   }, []);
 
   const handleBlur = useCallback(() => {
     // Small delay to ensure any final changes are captured
     setTimeout(() => {
-      console.log('Note blur - switching to preview mode, markdown enabled:', settings.markdown);
-      console.log('Current note content:', noteContent?.substring(0, 100));
-      console.log('Current preview:', markdownPreview?.substring(0, 100));
+      // Don't blur if we're in the middle of updating
+      if (isUpdatingRef.current) {
+        return;
+      }
+      
+      // Don't blur if we just pressed a key (within 200ms)
+      if (Date.now() - lastKeyPressRef.current < 200) {
+        return;
+      }
+      
+      // Check if focus is still within the editor elements
+      const activeElement = document.activeElement;
+      const editorContainer = textAreaRef.current?.parentElement;
+      const tinyMDEEditor = textAreaRef.current?.nextSibling as HTMLElement;
+      
+      // Check if focus is still within any editor-related element
+      if (activeElement && (
+        activeElement === textAreaRef.current ||
+        editorContainer?.contains(activeElement) ||
+        tinyMDEEditor?.contains(activeElement)
+      )) {
+        return;
+      }
+      
       setIsEditing(false);
     }, 100);
-  }, [settings.markdown, noteContent, markdownPreview]);
+  }, []);
 
   const handlePreviewClick = useCallback(() => {
     setIsEditing(true);
@@ -127,12 +180,7 @@ function WidgetComp({id, widgetApi, settings}: WidgetReactComponentProps<Setting
           
           // Update preview
           if (settings.markdown) {
-            Promise.resolve(marked(noteValue)).then((html: string) => {
-              setMarkdownPreview(html);
-              setMarkdownError(null);
-            }).catch((error: any) => {
-              setMarkdownError(error instanceof Error ? error.message : 'Failed to parse markdown');
-            });
+            parseMarkdown(noteValue);
           }
           
           // Update the textarea or TinyMDE editor
@@ -149,80 +197,201 @@ function WidgetComp({id, widgetApi, settings}: WidgetReactComponentProps<Setting
     return () => {
       electronIpcRenderer.removeListener(ipcStateSyncChannel, handleSync);
     };
-  }, [settings.markdown]);
+  }, [settings.markdown, parseMarkdown]);
 
   useEffect(() => {
     loadNote();
-  }, [loadNote])
+  }, [loadNote]);
 
   useEffect(() => {
     if (textAreaRef.current && settings.markdown) {
+      // Clean up any existing TinyMDE instance first
+      if (tinyMDERef.current) {
+        // Manual cleanup - remove TinyMDE DOM elements
+        const existingEditor = textAreaRef.current.nextSibling as HTMLElement;
+        if (existingEditor && existingEditor.classList?.contains('TinyMDE')) {
+          existingEditor.remove();
+        }
+        tinyMDERef.current = null;
+      }
+      
       const tinyMDE = new Editor({textarea: textAreaRef.current});
       tinyMDE.addEventListener('change', (e) => updNote(e.content));
+      
+      // Store cleanup functions
+      const cleanupFunctions: (() => void)[] = [];
       
       // TinyMDE creates its editor as the next sibling
       const editorElement = textAreaRef.current.nextSibling as HTMLElement;
       if (editorElement) {
         editorElement.spellcheck = settings.spellCheck;
-        console.log('TinyMDE editor element found:', editorElement.className);
         
         // Set contentEditable to make sure events work properly
         editorElement.setAttribute('contenteditable', 'true');
         
+        // Add keyboard handler for better list and checkbox support
+        const keyDownHandler = (event: KeyboardEvent) => {
+          // Track key press time to prevent blur on typing
+          lastKeyPressRef.current = Date.now();
+          
+          if (event.key === 'Enter') {
+            const selection = window.getSelection();
+            if (!selection || selection.rangeCount === 0) return;
+            
+            const range = selection.getRangeAt(0);
+            const startContainer = range.startContainer;
+            const currentLine = startContainer.textContent || '';
+            
+            // Check if we're at the end of a list item
+            if (range.collapsed && range.startOffset === currentLine.length) {
+              // Check for checkbox pattern
+              const checkboxMatch = currentLine.match(/^(\s*)([-*+])\s+\[([ xX])\]\s*(.*)$/);
+              if (checkboxMatch) {
+                const [, indent, marker, , text] = checkboxMatch;
+                
+                // If empty checkbox item, remove it and exit list
+                if (!text.trim()) {
+                  event.preventDefault();
+                  return;
+                }
+                
+                // Insert new checkbox item
+                event.preventDefault();
+                document.execCommand('insertHTML', false, `\n${indent}${marker} [ ] `);
+                return;
+              }
+              
+              // Check for regular list pattern
+              const listMatch = currentLine.match(/^(\s*)([-*+]|\d+\.)\s+(.*)$/);
+              if (listMatch) {
+                const [, indent, marker, text] = listMatch;
+                
+                // If empty list item, remove it and exit list
+                if (!text.trim()) {
+                  event.preventDefault();
+                  return;
+                }
+                
+                // Insert new list item
+                event.preventDefault();
+                let newMarker = marker;
+                // Handle numbered lists
+                if (/^\d+\./.test(marker)) {
+                  const num = parseInt(marker) + 1;
+                  newMarker = `${num}.`;
+                }
+                document.execCommand('insertHTML', false, `\n${indent}${newMarker} `);
+                return;
+              }
+            }
+          } else if (event.key === 'Tab') {
+            // Handle indentation
+            event.preventDefault();
+            if (event.shiftKey) {
+              // Decrease indent
+              document.execCommand('outdent', false);
+            } else {
+              // Increase indent
+              document.execCommand('insertHTML', false, '    '); // 4 spaces
+            }
+          } else if (event.key === 'c' && (event.metaKey || event.ctrlKey) && event.shiftKey) {
+            // Cmd/Ctrl+Shift+C to insert checkbox
+            event.preventDefault();
+            const selection = window.getSelection();
+            if (!selection || selection.rangeCount === 0) return;
+            
+            const range = selection.getRangeAt(0);
+            const startContainer = range.startContainer;
+            const currentLine = startContainer.textContent || '';
+            
+            // Check if we're at the beginning of a line or after whitespace
+            const beforeCursor = currentLine.substring(0, range.startOffset);
+            if (beforeCursor.match(/^\s*$/)) {
+              // Insert checkbox at the beginning of the line
+              document.execCommand('insertHTML', false, '- [ ] ');
+            } else {
+              // Insert inline checkbox
+              document.execCommand('insertHTML', false, ' - [ ] ');
+            }
+          }
+        };
+        
+        // Add keyup handler to track key release as well
+        const keyUpHandler = () => {
+          lastKeyPressRef.current = Date.now();
+        };
+
+        editorElement.addEventListener('keydown', keyDownHandler);
+        editorElement.addEventListener('keyup', keyUpHandler);
+        cleanupFunctions.push(() => {
+          editorElement.removeEventListener('keydown', keyDownHandler);
+          editorElement.removeEventListener('keyup', keyUpHandler);
+        });
+        
         // Add focus/blur listeners with capture phase to ensure they fire
         editorElement.addEventListener('focusin', handleFocus, true);
         editorElement.addEventListener('focusout', handleBlur, true);
+        cleanupFunctions.push(() => {
+          editorElement.removeEventListener('focusin', handleFocus, true);
+          editorElement.removeEventListener('focusout', handleBlur, true);
+        });
         
         // Also try adding to the contenteditable div inside TinyMDE
         const contentDiv = editorElement.querySelector('[contenteditable]') as HTMLElement;
         if (contentDiv && contentDiv !== editorElement) {
-          console.log('Found inner contenteditable div');
           contentDiv.addEventListener('focus', handleFocus);
           contentDiv.addEventListener('blur', handleBlur);
+          contentDiv.addEventListener('keydown', keyDownHandler);
+          contentDiv.addEventListener('keyup', keyUpHandler);
+          cleanupFunctions.push(() => {
+            contentDiv.removeEventListener('focus', handleFocus);
+            contentDiv.removeEventListener('blur', handleBlur);
+            contentDiv.removeEventListener('keydown', keyDownHandler);
+            contentDiv.removeEventListener('keyup', keyUpHandler);
+          });
         }
-      } else {
-        console.warn('Could not find TinyMDE editor element');
       }
       
       tinyMDERef.current = tinyMDE;
       
       // Return cleanup function
       return () => {
-        if (editorElement) {
-          editorElement.removeEventListener('focusin', handleFocus, true);
-          editorElement.removeEventListener('focusout', handleBlur, true);
-          const contentDiv = editorElement.querySelector('[contenteditable]') as HTMLElement;
-          if (contentDiv && contentDiv !== editorElement) {
-            contentDiv.removeEventListener('focus', handleFocus);
-            contentDiv.removeEventListener('blur', handleBlur);
-          }
-        }
-        // Clean up TinyMDE when unmounting or switching to plain text
+        // Execute all cleanup functions
+        cleanupFunctions.forEach(fn => fn());
+        
+        // Clean up TinyMDE instance
         if (tinyMDERef.current) {
+          // Manual cleanup - remove TinyMDE DOM elements
+          const editorElement = textAreaRef.current?.nextSibling as HTMLElement;
+          if (editorElement && editorElement.classList?.contains('TinyMDE')) {
+            editorElement.remove();
+          }
           tinyMDERef.current = null;
         }
       };
     } else if (textAreaRef.current && !settings.markdown) {
       // Plain text mode - clean up any existing TinyMDE
-      tinyMDERef.current = null;
-      loadedNote.current = textAreaRef.current.value;
-      Array.from(textAreaRef.current.parentElement?.children || [])
-        .filter(child => child.classList.contains('TinyMDE'))
-        .forEach(child => child.remove());
+      if (tinyMDERef.current) {
+        // Manual cleanup - remove TinyMDE DOM elements
+        const existingEditor = textAreaRef.current.nextSibling as HTMLElement;
+        if (existingEditor && existingEditor.classList?.contains('TinyMDE')) {
+          existingEditor.remove();
+        }
+        tinyMDERef.current = null;
+      }
+      
+      // Clean up any leftover TinyMDE elements
+      const tinyMDEElements = textAreaRef.current.parentElement?.querySelectorAll('.TinyMDE');
+      tinyMDEElements?.forEach(el => el.remove());
     }
-  }, [settings.markdown, settings.spellCheck, handleFocus, handleBlur, updNote])
+  }, [settings.markdown, settings.spellCheck, updNote, handleFocus, handleBlur]);
 
   if (!isLoaded) {
     return <>Loading Note...</>;
   }
 
-  console.log('Note render - markdown:', settings.markdown, 'isEditing:', isEditing, 'preview:', markdownPreview?.substring(0, 50));
-
   // Show preview when markdown is enabled and not editing
-  if (settings.markdown && !isEditing) {
-    console.log('Showing preview mode, markdownPreview length:', markdownPreview?.length);
-    console.log('Preview HTML:', markdownPreview);
-    
+  if (settings.markdown && !isEditing && noteContent) { // Only show preview if there's content
     return (
       <div className={styles['preview-container']} onClick={handlePreviewClick}>
         {markdownError ? (
@@ -255,7 +424,7 @@ function WidgetComp({id, widgetApi, settings}: WidgetReactComponentProps<Setting
       onChange={handleChange}
       onFocus={handleFocus}
       onBlur={handleBlur}
-      placeholder='Write a note here'
+      placeholder={settings.markdown ? 'Write a note here...\n\nKeyboard shortcuts:\n• Cmd/Ctrl+Shift+C: Insert checkbox\n• Tab/Shift+Tab: Indent/outdent\n• Enter after list item: Continue list' : 'Write a note here'}
       data-widget-context={textAreaContextId}
       spellCheck={settings.spellCheck}
     ></textarea>
