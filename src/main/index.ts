@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { hostFreeterApp, schemeFreeterFile } from '@common/infra/network';
 import { channelPrefix } from '@common/ipc/ipc';
 import { createIpcMain } from '@/infra/ipcMain/ipcMain';
-import { app } from 'electron';
+import { app, session } from 'electron';
 import { createRendererWindow } from '@/infra/browserWindow/browserWindow';
 import { createIpcMainEventValidator } from '@/infra/ipcMain/ipcMainEventValidator';
 import { registerAppFileProtocol } from '@/infra/protocolHandler/registerAppFileProtocol';
@@ -82,32 +82,38 @@ if (!app.requestSingleInstanceLock()) {
   // there is another instance of the app running
   app.quit();
 } {
-  app.on('second-instance', (_event, _commandLine, _workingDirectory, _additionalData) => {
-    // Show and focus any visible window, prioritize the first window
-    let visibleWindow: BrowserWindow | null = null;
-    for (const [_, window] of allWindows) {
-      if (window && !window.isMinimized()) {
-        visibleWindow = window;
-        break;
+  app.on('second-instance', (_event, commandLine, _workingDirectory, _additionalData) => {
+    // Check if the second instance was started with a protocol URL
+    const protocolArg = commandLine.find(arg => arg.startsWith('freeter://'));
+    if (protocolArg) {
+      handleOAuthRedirect(protocolArg);
+    } else {
+      // Show and focus any visible window, prioritize the first window
+      let visibleWindow: BrowserWindow | null = null;
+      for (const [_, window] of allWindows) {
+        if (window && !window.isMinimized()) {
+          visibleWindow = window;
+          break;
+        }
       }
-    }
-    visibleWindow = visibleWindow || appWindow;
-    
-    if (visibleWindow) {
-      if (!visibleWindow.isVisible()) {
-        visibleWindow.show();
-      }
-      if (visibleWindow.isMinimized()) {
-        visibleWindow.restore()
-      }
-      visibleWindow.focus()
-    } else if (allWindows.size > 0) {
-      // No visible windows, show the first one
-      const firstWindow = allWindows.values().next().value;
-      if (firstWindow) {
-        firstWindow.show();
-        firstWindow.restore();
-        firstWindow.focus();
+      visibleWindow = visibleWindow || appWindow;
+      
+      if (visibleWindow) {
+        if (!visibleWindow.isVisible()) {
+          visibleWindow.show();
+        }
+        if (visibleWindow.isMinimized()) {
+          visibleWindow.restore()
+        }
+        visibleWindow.focus()
+      } else if (allWindows.size > 0) {
+        // No visible windows, show the first one
+        const firstWindow = allWindows.values().next().value;
+        if (firstWindow) {
+          firstWindow.show();
+          firstWindow.restore();
+          firstWindow.focus();
+        }
       }
     }
   })
@@ -117,6 +123,49 @@ if (!app.requestSingleInstanceLock()) {
   const processProvider = createProcessProvider();
   const processInfo = processProvider.getProcessInfo();
   const { isDevMode } = processInfo;
+
+  // Register OAuth protocol handler for redirects
+  if (process.defaultApp) {
+    if (process.argv.length >= 2) {
+      app.setAsDefaultProtocolClient('freeter', process.execPath, [process.argv[1]]);
+    }
+  } else {
+    app.setAsDefaultProtocolClient('freeter');
+  }
+
+  // Handle OAuth redirects
+  app.on('open-url', (event, url) => {
+    event.preventDefault();
+    handleOAuthRedirect(url);
+  });
+
+  // Helper function to handle OAuth redirects
+  function handleOAuthRedirect(url: string) {
+    // Find the first visible window and focus it
+    let targetWindow: BrowserWindow | null = null;
+    for (const [_, window] of allWindows) {
+      if (window && !window.isMinimized()) {
+        targetWindow = window;
+        break;
+      }
+    }
+    targetWindow = targetWindow || appWindow;
+    
+    if (targetWindow) {
+      if (!targetWindow.isVisible()) {
+        targetWindow.show();
+      }
+      if (targetWindow.isMinimized()) {
+        targetWindow.restore();
+      }
+      targetWindow.focus();
+      
+      // Optionally, you can send the OAuth callback URL to the renderer
+      // to handle the OAuth completion
+      const electronWindow = targetWindow as any;
+      electronWindow.webContents.send('oauth-callback', url);
+    }
+  }
 
   registerAppFileProtocol(isDevMode);
 
@@ -148,6 +197,50 @@ if (!app.requestSingleInstanceLock()) {
   })
 
   app.whenReady().then(async () => {
+    // Configure session persistence for webviews
+    // Electron automatically persists sessions when partition starts with "persist:"
+    
+    // Configure webview sessions when they are created
+    app.on('web-contents-created', (event, contents) => {
+      // Check if it's a webview
+      if (contents.getType() === 'webview') {
+        contents.on('will-attach-webview', (event, webPreferences, params) => {
+          // Get the partition from params
+          const partition = params.partition;
+          
+          // If partition starts with 'persist', ensure the session is configured properly
+          if (partition && partition.startsWith('persist')) {
+            // Create/get the session with cache enabled for persistence
+            const partitionSession = session.fromPartition(partition, { cache: true });
+            
+            // Configure cookie policy to ensure they persist
+            partitionSession.cookies.on('changed', () => {
+              // This ensures cookies are written to disk
+              partitionSession.cookies.flushStore().catch(console.error);
+            });
+            
+            // Enable all persistence features
+            partitionSession.setPermissionRequestHandler((webContents: any, permission: string, callback: (granted: boolean) => void) => {
+              // Allow storage-related permissions
+              callback(true); // Be permissive for webview functionality
+            });
+          } else if (partition && partition.startsWith('browser')) {
+            // Handle browser widget partitions
+            const partitionSession = session.fromPartition(partition, { cache: true });
+            
+            // Configure cookie policy for browser widgets
+            partitionSession.cookies.on('changed', () => {
+              partitionSession.cookies.flushStore().catch(console.error);
+            });
+            
+            partitionSession.setPermissionRequestHandler((webContents: any, permission: string, callback: (granted: boolean) => void) => {
+              callback(true);
+            });
+          }
+        });
+      }
+    });
+
     const ipcMainEventValidator = createIpcMainEventValidator(channelPrefix, hostFreeterApp);
     const ipcMain = createIpcMain(ipcMainEventValidator);
 

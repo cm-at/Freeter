@@ -29,7 +29,8 @@ export function createStateSyncControllers({
       
       // Broadcast the state change to all other windows
       for (const [, window] of allWindows) {
-        const electronWindow = window as unknown as ElectronBrowserWindow;
+        // Cast to any to bypass TypeScript checking for Electron internals
+        const electronWindow = window as any;
         if (electronWindow !== sourceWindow && !electronWindow.isDestroyed()) {
           electronWindow.webContents.send(ipcStateSyncChannel, args);
         }

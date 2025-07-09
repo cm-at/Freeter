@@ -50,7 +50,7 @@ export interface Settings {
 export const createSettingsState: CreateSettingsState<Settings> = (settings) => ({
   homeUrl: typeof settings.homeUrl === 'string' ? settings.homeUrl : '',
   sessionPersist: isSettingsSessionPersist(settings.sessionPersist) ? settings.sessionPersist : 'persist',
-  sessionScope: isSettingsSessionScope(settings.sessionScope) ? settings.sessionScope : 'prj',
+  sessionScope: isSettingsSessionScope(settings.sessionScope) ? settings.sessionScope : 'app',
   injectedCSS: typeof settings.injectedCSS === 'string' ? settings.injectedCSS : '',
   injectedJS: typeof settings.injectedJS === 'string' ? settings.injectedJS : '',
   userAgent: typeof settings.userAgent === 'string' ? settings.userAgent : '',

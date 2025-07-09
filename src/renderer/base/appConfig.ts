@@ -19,21 +19,26 @@ export interface AppConfig {
 }
 
 export const defaultPopupDomainPatterns: PopupDomainPattern[] = [
-  // Keep specific popups/authentication flows in window
-  { pattern: '^https?:\\/\\/accounts\\.google\\.com\\/signin\\/oauth', isRegex: true, enabled: true },
-  { pattern: '^https?:\\/\\/.*\\.auth0\\.com\\/authorize', isRegex: true, enabled: true },
-  { pattern: '^https?:\\/\\/github\\.com\\/login\\/device', isRegex: true, enabled: true },
+  // OAuth callback patterns - these should stay in Electron window
   { pattern: '^https?:\\/\\/.*\\/auth\\/.*\\/callback', isRegex: true, enabled: true },
   { pattern: '^https?:\\/\\/localhost.*\\/callback', isRegex: true, enabled: true },
   { pattern: '^https?:\\/\\/127\\.0\\.0\\.1.*\\/callback', isRegex: true, enabled: true },
+  { pattern: 'freeter:\\/\\/oauth', isRegex: false, enabled: true },
   
-  // Keep specific dialog/popup patterns in window
+  // Specific OAuth completion pages that should stay in window
+  { pattern: '^https?:\\/\\/accounts\\.google\\.com\\/signin\\/oauth\\/consent', isRegex: true, enabled: true },
+  { pattern: '^https?:\\/\\/.*\\.auth0\\.com\\/authorize', isRegex: true, enabled: true },
+  { pattern: '^https?:\\/\\/github\\.com\\/login\\/device\\/success', isRegex: true, enabled: true },
+  
+  // Dialog/popup indicators
   { pattern: 'popup=true', isRegex: false, enabled: true },
   { pattern: 'dialog=true', isRegex: false, enabled: true },
   { pattern: '_popup=true', isRegex: false, enabled: true },
   
-  // Keep specific web app popups
+  // App-specific OAuth patterns
   { pattern: '^https?:\\/\\/.*\\.slack\\.com\\/.*\\/oauth', isRegex: true, enabled: true },
   { pattern: '^https?:\\/\\/.*\\.zoom\\.us\\/.*\\/oauth', isRegex: true, enabled: true },
   { pattern: '^https?:\\/\\/.*\\.dropbox\\.com\\/oauth', isRegex: true, enabled: true },
+  { pattern: '^https?:\\/\\/.*\\.notion\\.so\\/.*\\/oauth', isRegex: true, enabled: true },
+  { pattern: '^https?:\\/\\/.*\\.trello\\.com\\/.*\\/authorize', isRegex: true, enabled: true },
 ];

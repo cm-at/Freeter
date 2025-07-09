@@ -48,7 +48,7 @@ export interface Settings {
 export const createSettingsState: CreateSettingsState<Settings> = (settings) => ({
   autoReload: typeof settings.autoReload === 'number' ? settings.autoReload : 0,
   sessionPersist: isSettingsSessionPersist(settings.sessionPersist) ? settings.sessionPersist : 'persist',
-  sessionScope: isSettingsSessionScope(settings.sessionScope) ? settings.sessionScope : 'prj',
+  sessionScope: isSettingsSessionScope(settings.sessionScope) ? settings.sessionScope : 'app',
   url: typeof settings.url === 'string' ? settings.url : '',
   injectedCSS: typeof settings.injectedCSS === 'string' ? settings.injectedCSS : '',
   injectedJS: typeof settings.injectedJS === 'string' ? settings.injectedJS : '',
@@ -125,7 +125,7 @@ export function SettingsEditorComp({settings, settingsApi}: SettingsEditorReactC
                   will share the data between widgets within the same project. Workflow Scope - between widgets within the
                   same workflow tab. Widget Scope will not share the session data with other webpage widgets.'
       >
-        <select id="webpage-session-scope" value={settings.sessionScope} onChange={e => updateSettings({
+        <select id="webpage-session-scope" aria-label="Session Scope" value={settings.sessionScope} onChange={e => updateSettings({
           ...settings,
           sessionScope: isSettingsSessionScope(e.target.value) ? e.target.value : 'prj'
         })}>
@@ -141,7 +141,7 @@ export function SettingsEditorComp({settings, settingsApi}: SettingsEditorReactC
         title='Session Persistence'
         moreInfo='By default, the widget will persist the session data after you exit the application. Set the Temporary mode to clear the session data on exit.'
       >
-        <select id="webpage-session-persistence" value={settings.sessionPersist} onChange={e => updateSettings({
+        <select id="webpage-session-persistence" aria-label="Session Persistence" value={settings.sessionPersist} onChange={e => updateSettings({
           ...settings,
           sessionPersist: isSettingsSessionPersist(e.target.value) ? e.target.value : 'persist'
         })}>
@@ -155,7 +155,7 @@ export function SettingsEditorComp({settings, settingsApi}: SettingsEditorReactC
         title='Auto-Reload'
         moreInfo="If you need to automatically refresh the webpage, use this option to set the auto-reload interval."
       >
-        <select id="webpage-auto-reload" value={settings.autoReload} onChange={e => updateSettings({
+        <select id="webpage-auto-reload" aria-label="Auto-Reload Interval" value={settings.autoReload} onChange={e => updateSettings({
           ...settings,
           autoReload: Number.parseInt(e.target.value) || 0
         })}>
