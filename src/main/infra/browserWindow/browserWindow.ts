@@ -7,6 +7,7 @@ import { BrowserWindowConstructorOptions, BrowserWindow as ElectronBrowserWindow
 import { BrowserWindow } from '@/application/interfaces/browserWindow'
 import { GetWindowStateUseCase } from '@/application/useCases/browserWindow/getWindowState';
 import { SetWindowStateUseCase } from '@/application/useCases/browserWindow/setWindowState';
+import { getPopupDomains } from '@/controllers/appConfig';
 
 const minWidth = 1200;
 const minHeight = 600;
@@ -161,33 +162,60 @@ export function createRendererWindow(
   // enable new windows in webview
   win.webContents.on('did-attach-webview', (_, wc) => {
     wc.setWindowOpenHandler((details) => {
-      // Check if this is an external OAuth or payment URL that should open in default browser
-      const externalPatterns = [
-        /^https?:\/\/accounts\.google\.com/i,
-        /^https?:\/\/.*\.auth0\.com/i,
-        /^https?:\/\/github\.com\/login/i,
-        /^https?:\/\/api\.twitter\.com\/oauth/i,
-        /^https?:\/\/www\.facebook\.com\/.*\/dialog\/oauth/i,
-        /^https?:\/\/.*paypal\.com/i,
-        /^https?:\/\/.*stripe\.com/i,
-        /oauth/i,
-        /authorize/i,
-        /authentication/i
-      ];
+      // Get current popup domain configuration
+      const popupDomains = getPopupDomains();
       
-      const shouldOpenExternal = externalPatterns.some(pattern => pattern.test(details.url));
-      
-      if (shouldOpenExternal) {
-        // Open in default browser
+      // Check if URL matches any enabled popup pattern
+      const shouldOpenAsPopup = popupDomains.some(domain => {
+        if (!domain.enabled) return false;
+        
+        if (domain.isRegex) {
+          try {
+            const regex = new RegExp(domain.pattern);
+            return regex.test(details.url);
+          } catch (e) {
+            return false;
+          }
+        } else {
+          // Plain text match anywhere in URL
+          return details.url.includes(domain.pattern);
+        }
+      });
+
+      // If URL doesn't match popup patterns, open in default browser
+      if (!shouldOpenAsPopup) {
         shell.openExternal(details.url);
         return { action: 'deny' };
       }
 
-      const { height, width, x, y } = win.getBounds();
-      const newW = Math.min(width - 200, 1200);
-      const newH = Math.min(height - 150, 800);
-      const newX = x + Math.round((width - newW) / 2)
-      const newY = y + Math.round((height - newH) / 2)
+      // Open as popup window
+      // Determine the new window position and size
+      const [parentW, parentH] = win.getSize();
+      const [parentX, parentY] = win.getPosition();
+      
+      let newW = 1200;
+      let newH = 700;
+      
+      // If features are specified, try to use them
+      if (details.features) {
+        const features = details.features.split(',').reduce((acc, feature) => {
+          const [key, value] = feature.split('=');
+          acc[key.trim()] = value ? value.trim() : 'yes';
+          return acc;
+        }, {} as Record<string, string>);
+        
+        if (features.width) {
+          newW = parseInt(features.width, 10) || newW;
+        }
+        if (features.height) {
+          newH = parseInt(features.height, 10) || newH;
+        }
+      }
+      
+      // Center the new window relative to parent
+      const newX = Math.round(parentX + (parentW - newW) / 2);
+      const newY = Math.round(parentY + (parentH - newH) / 2);
+      
       const browserWinOpts: BrowserWindowConstructorOptions = {
         width: newW,
         height: newH,
@@ -198,18 +226,23 @@ export function createRendererWindow(
         closable: true,
         icon,
         parent: win,
-        modal: false, // Important: Don't make it modal
+        modal: false, // Never make it modal
+        alwaysOnTop: false, // Don't force on top
+        skipTaskbar: false, // Show in taskbar
         title: details.frameName || 'Freeter',
+        backgroundColor: '#ffffff', // Prevent black background
         webPreferences: {
           session: wc.session,
           nodeIntegration: false,
           contextIsolation: true,
-          webSecurity: true
+          webSecurity: true,
+          backgroundThrottling: false // Prevent rendering issues
         }
       }
+      
       return {
         action: 'allow',
-        outlivesOpener: false,
+        outlivesOpener: true, // Allow it to stay open if parent closes
         overrideBrowserWindowOptions: browserWinOpts
       }
     })

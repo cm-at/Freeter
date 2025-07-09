@@ -1,0 +1,142 @@
+/*
+ * Copyright: (c) 2024, Alex Kaul
+ * GNU General Public License v3.0 or later (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+ */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.patternList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.patternItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px;
+  border-radius: 4px;
+  
+  &:hover {
+    background-color: var(--color-bg-hover);
+  }
+}
+
+.enabledCheckbox {
+  flex-shrink: 0;
+}
+
+.patternInput {
+  flex: 1;
+  padding: 4px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 13px;
+  
+  &:disabled {
+    opacity: 0.5;
+    background-color: var(--color-bg-disabled);
+  }
+}
+
+.regexLabel {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  white-space: nowrap;
+  
+  input {
+    margin: 0;
+  }
+}
+
+.deleteButton {
+  flex-shrink: 0;
+  padding: 4px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: 4px;
+  
+  &:hover {
+    background-color: var(--color-bg-hover);
+  }
+  
+  img {
+    display: block;
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.addSection {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background-color: var(--color-bg-secondary);
+  border-radius: 4px;
+}
+
+.newPatternInput {
+  flex: 1;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 13px;
+}
+
+.error {
+  color: var(--color-error);
+  font-size: 13px;
+  padding: 8px;
+  background-color: var(--color-error-bg);
+  border-radius: 4px;
+}
+
+.resetSection {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border);
+}
+
+.helpText {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  background-color: var(--color-bg-secondary);
+  padding: 12px;
+  border-radius: 4px;
+  
+  strong {
+    display: block;
+    margin-bottom: 8px;
+  }
+  
+  ul {
+    margin: 0;
+    padding-left: 20px;
+  }
+  
+  li {
+    margin-bottom: 4px;
+  }
+  
+  code {
+    background-color: var(--color-bg-code);
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-size: 12px;
+  }
+} 

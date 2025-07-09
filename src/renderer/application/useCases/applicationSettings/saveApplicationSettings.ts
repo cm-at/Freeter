@@ -5,32 +5,47 @@
 
 import { AppStore } from '@/application/interfaces/store';
 import { modalScreensStateActions } from '@/base/state/actions';
+import { electronIpcRenderer } from '@/infra/mainApi/mainApi';
+import { IpcStateSyncArgs, IpcStateSyncRes, ipcStateSyncChannel } from '@common/ipc/channels';
 
 type Deps = {
   appStore: AppStore;
 }
 
+export type SaveApplicationSettingsUseCase = () => void;
+
 export function createSaveApplicationSettingsUseCase({
-  appStore,
-}: Deps) {
-  const useCase = () => {
-    let state = appStore.get();
+  appStore
+}: Deps): SaveApplicationSettingsUseCase {
+  return () => {
+    const state = appStore.get();
     const { appConfig } = state.ui.modalScreens.data.applicationSettings;
     if (!appConfig) {
       return;
     }
-    state = {
+    
+    // Update the app config in state
+    const newState = {
       ...state,
       ui: {
         ...state.ui,
-        appConfig,
+        appConfig
       }
-    }
-    state = modalScreensStateActions.closeModalScreen(state, 'applicationSettings');
-    appStore.set(state);
+    };
+    
+    // Notify other windows about the app config update
+    const syncArgs: IpcStateSyncArgs = {
+      type: 'app-config-update',
+      payload: {
+        appConfig
+      },
+      sourceWindowId: Date.now(),
+      timestamp: Date.now()
+    };
+    
+    electronIpcRenderer.invoke<[IpcStateSyncArgs], IpcStateSyncRes>(ipcStateSyncChannel, syncArgs);
+    
+    // Close the modal and update state
+    appStore.set(modalScreensStateActions.closeModalScreen(newState, 'applicationSettings'));
   }
-
-  return useCase;
 }
-
-export type SaveApplicationSettingsUseCase = ReturnType<typeof createSaveApplicationSettingsUseCase>;

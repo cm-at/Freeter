@@ -6,6 +6,7 @@
 import { Controller } from '@/controllers/controller';
 import { IpcStateSyncArgs, ipcStateSyncChannel } from '@common/ipc/channels';
 import { BrowserWindow } from 'electron';
+import { updatePopupDomains } from './appConfig';
 
 type Deps = {
   getAllWindows: () => Map<number, BrowserWindow>;
@@ -19,6 +20,11 @@ export function createStateSyncControllers({
     handle: async (event, args) => {
       const sourceWindow = BrowserWindow.fromWebContents(event.sender as any);
       const allWindows = getAllWindows();
+      
+      // Handle app config updates
+      if (args.type === 'app-config-update' && args.payload?.appConfig?.popupDomains) {
+        updatePopupDomains(args.payload.appConfig.popupDomains);
+      }
       
       // Broadcast the state change to all other windows
       for (const [windowId, window] of allWindows) {

@@ -11,6 +11,7 @@ import { Workflow } from '@/base/workflow';
 import { Widget } from '@/base/widget';
 import { App } from '@/base/app';
 import { electronIpcRenderer } from '@/infra/mainApi/mainApi';
+import { AppStore } from '@/application/interfaces/store';
 
 type Deps = {
   getProjects: () => EntityCollection<Project>;
@@ -21,6 +22,7 @@ type Deps = {
   setWorkflows: (workflows: EntityCollection<Workflow>) => void;
   setWidgets: (widgets: EntityCollection<Widget>) => void;
   setApps: (apps: EntityCollection<App>) => void;
+  appStore: AppStore;
 }
 
 export const createSyncStateEntitiesUseCase = ({
@@ -31,7 +33,8 @@ export const createSyncStateEntitiesUseCase = ({
   setProjects,
   setWorkflows,
   setWidgets,
-  setApps
+  setApps,
+  appStore
 }: Deps) => {
   // Track last update timestamps to avoid circular updates
   const lastUpdateTimestamps = new Map<string, number>();
@@ -92,6 +95,19 @@ export const createSyncStateEntitiesUseCase = ({
   const handleStateSync = (_event: any, args: IpcStateSyncArgs) => {
     if (args.sourceWindowId === windowId) {
       // Ignore our own updates
+      return;
+    }
+    
+    // Handle app config updates
+    if (args.type === 'app-config-update' && args.payload.appConfig) {
+      const currentState = appStore.get();
+      appStore.set({
+        ...currentState,
+        ui: {
+          ...currentState.ui,
+          appConfig: args.payload.appConfig
+        }
+      });
       return;
     }
     

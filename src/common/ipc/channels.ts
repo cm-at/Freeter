@@ -133,7 +133,7 @@ export type IpcReloadWindowRes = void;
 
 export const ipcStateSyncChannel = makeIpcChannelName('state-sync');
 export type IpcStateSyncArgs = {
-  type: 'entities-update' | 'widget-data-update';
+  type: 'entities-update' | 'widget-data-update' | 'app-config-update';
   payload: {
     projects?: any;
     workflows?: any;
@@ -141,12 +141,16 @@ export type IpcStateSyncArgs = {
     apps?: any;
     widgetId?: string;
     widgetData?: any;
+    appConfig?: any;
   };
   sourceWindowId: number;
   timestamp: number;
 };
 export type IpcStateSyncRes = void;
 
+export const ipcGetPopupDomainsChannel = makeIpcChannelName('get-popup-domains');
+export type IpcGetPopupDomainsArgs = [];
+export type IpcGetPopupDomainsRes = { pattern: string; isRegex: boolean; enabled: boolean; }[];
 
 export const ipcExecCmdLinesInTerminalChannel = makeIpcChannelName('exec-cmd-lines-in-terminal');
 export type IpcExecCmdLinesInTerminalArgs = [cmdLines: ReadonlyArray<string>, cwd?: string];

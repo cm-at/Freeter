@@ -4,7 +4,7 @@
  */
 
 import { App } from '@/base/app';
-import { AppConfig } from '@/base/appConfig';
+import { AppConfig, defaultPopupDomainPatterns } from '@/base/appConfig';
 import { Entity, EntityId } from '@/base/entity';
 import { EntityCollection } from '@/base/entityCollection';
 import { EntityIdList } from '@/base/entityList';
@@ -236,7 +236,8 @@ export function createUiState(): UiState {
         activateWorkflowsOnProjectSwitch: true,
         workflowInactiveAfter: -1
       },
-      uiTheme: defaultUiThemeId
+      uiTheme: defaultUiThemeId,
+      popupDomains: [...defaultPopupDomainPatterns]
     },
     apps: {
       appIds: []

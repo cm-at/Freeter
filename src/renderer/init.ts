@@ -519,7 +519,8 @@ async function createUseCases(store: ReturnType<typeof createStore>) {
           apps
         }
       });
-    }
+    },
+    appStore: store.appStore
   });
 
   return {

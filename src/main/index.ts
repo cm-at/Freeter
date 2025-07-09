@@ -71,6 +71,7 @@ import { createOpenPathUseCase } from '@/application/useCases/shell/openPath';
 import { createCopyWidgetDataStorageUseCase } from '@/application/useCases/widgetDataStorage/copyWidgetDataStorage';
 import { createOpenAppUseCase } from '@/application/useCases/shell/openApp';
 import { createStateSyncControllers } from '@/controllers/stateSync';
+import { createAppConfigControllers } from '@/controllers/appConfig';
 
 let appWindow: BrowserWindow | null = null; // ref to the first app window
 const allWindows: Map<number, BrowserWindow> = new Map(); // track all windows by ID
@@ -320,7 +321,8 @@ if (!app.requestSingleInstanceLock()) {
       ...createTrayMenuControllers({ setTrayMenuUseCase }),
       ...createBrowserWindowControllers({ showBrowserWindowUseCase, openNewWindowUseCase }),
       ...createTerminalControllers({ execCmdLinesInTerminalUseCase }),
-      ...createStateSyncControllers({ getAllWindows: () => allWindows })
+      ...createStateSyncControllers({ getAllWindows: () => allWindows }),
+      ...createAppConfigControllers()
     ])
 
     // Create the first window

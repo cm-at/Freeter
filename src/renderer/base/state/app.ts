@@ -3,12 +3,13 @@
  * GNU General Public License v3.0 or later (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
  */
 
+import { defaultPopupDomainPatterns } from '@/base/appConfig';
 import { mapEntityCollection } from '@/base/entityCollection';
 import { createEntitiesState, EntitiesState } from '@/base/state/entities';
 import { createUiState, UiState } from '@/base/state/ui';
 import { MigrateVersionedObject } from '@common/base/versionedObject';
 
-export const currentAppStateVersion = 2;
+export const currentAppStateVersion = 3;
 
 export interface AppState {
   entities: EntitiesState;
@@ -98,10 +99,11 @@ export function mergeAppStateWithPersistentAppState(
 }
 
 export const migrateAppState: MigrateVersionedObject<object, PersistentAppState> = (fromData, fromVer) => {
-  console.log(fromVer);
+  console.log('Migrating app state from version', fromVer);
   let toData = {
     ...fromData
   } as PersistentAppState
+  
   if (fromVer < 2) {
     toData = {
       ...toData,
@@ -134,5 +136,20 @@ export const migrateAppState: MigrateVersionedObject<object, PersistentAppState>
       }
     }
   }
+  
+  if (fromVer < 3) {
+    // Add popupDomains for existing users
+    toData = {
+      ...toData,
+      ui: {
+        ...toData.ui,
+        appConfig: {
+          ...toData.ui.appConfig,
+          popupDomains: toData.ui?.appConfig?.popupDomains || defaultPopupDomainPatterns
+        }
+      }
+    }
+  }
+  
   return toData;
 }

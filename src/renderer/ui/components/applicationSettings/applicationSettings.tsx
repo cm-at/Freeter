@@ -11,6 +11,7 @@ import { SettingsScreen } from '@/ui/components/basic/settingsScreen/settingsScr
 import { SettingBlock } from '@/widgets/appModules';
 import { memo } from 'react';
 import { convertBoolToStr, convertStrToBool } from '@/base/convTypes';
+import { PopupDomainSettings } from './popupDomainSettings';
 
 type Deps = {
   useApplicationSettingsViewModel: ApplicationSettingsViewModelHook;
@@ -41,7 +42,7 @@ export function createApplicationSettingsComponent({
             moreInfo='Hotkey enables you to bring Freeter to the front of the screen by pressing the specified key
                       combination.'
           >
-            <select id="main-hot-key" value={appConfig.mainHotkey} onChange={e => updateSettings({
+            <select id="main-hot-key" aria-label="Hotkey Combination" value={appConfig.mainHotkey} onChange={e => updateSettings({
               ...appConfig,
               mainHotkey: e.target.value
             })}>
@@ -56,7 +57,7 @@ export function createApplicationSettingsComponent({
             title='User Interface Theme'
             moreInfo='The interface theme defines the appearance of all visual elements of the user interface.'
           >
-            <select id="ui-theme" value={appConfig.uiTheme} onChange={e => updateSettings({
+            <select id="ui-theme" aria-label="User Interface Theme" value={appConfig.uiTheme} onChange={e => updateSettings({
               ...appConfig,
               uiTheme: e.target.value
             })}>
@@ -67,47 +68,51 @@ export function createApplicationSettingsComponent({
           </SettingBlock>
 
           <SettingBlock
-            title='Memory Saver'
-            moreInfo='Freeter frees up memory from inactive workflows.
-                      This gives active workflows more computer resources and keeps Freeter
-                      fast. Your inactive workflows automatically become active again when
-                      you go back to them.'
+            titleForId='inactive-after'
+            title='Workflow Becomes Inactive After'
+            moreInfo='This setting aims to reduce the app memory usage. When you switch workflows or projects, Freeter will
+                      unload the idle workflows and free the memory. You will see a progress indicator when opening an
+                      inactive workflow.'
           >
-            <SettingBlock
-              titleForId='mem-saver-inactive'
-              title='Workflow becomes inactive after'
-              moreInfo='This setting defines when workflows become inactive.'
-            >
-              <select id="mem-saver-inactive" value={appConfig.memSaver.workflowInactiveAfter} onChange={e => updateSettings({
-                ...appConfig,
-                memSaver: {
-                  ...appConfig.memSaver,
-                  workflowInactiveAfter: Number.parseInt(e.target.value)
-                }
-              })}>
-                {inactiveAfterOptions.map(item=>(
-                  <option key={item.val} value={item.val}>{item.name}</option>
-                ))}
-              </select>
-            </SettingBlock>
-            <SettingBlock
-              titleForId='mem-saver-activate-on-project'
-              title='Activate all workflows when switching project'
-              moreInfo='When turned on, switching to a project will activate all of its workflows.'
-            >
-              <select id="mem-saver-activate-on-project" value={convertBoolToStr(appConfig.memSaver.activateWorkflowsOnProjectSwitch)} onChange={e => updateSettings({
-                ...appConfig,
-                memSaver: {
-                  ...appConfig.memSaver,
-                  activateWorkflowsOnProjectSwitch: convertStrToBool(e.target.value)
-                }
-              })}>
-                {activateOnProjectSwitchOptions.map(item=>(
-                  <option key={convertBoolToStr(item.val)} value={convertBoolToStr(item.val)}>{item.name}</option>
-                ))}
-              </select>
-            </SettingBlock>
+            <select id="inactive-after" aria-label="Workflow Becomes Inactive After" value={appConfig.memSaver.workflowInactiveAfter} onChange={e => updateSettings({
+              ...appConfig,
+              memSaver: {
+                ...appConfig.memSaver,
+                workflowInactiveAfter: Number.parseInt(e.target.value) || -1
+              }
+            })}>
+              {inactiveAfterOptions.map(item=>(
+                <option key={item.val} value={item.val}>{item.name}</option>
+              ))}
+            </select>
           </SettingBlock>
+
+          <SettingBlock
+            titleForId='activate-workflows-on-project-switch'
+            title='Activate Workflows on Project Switch'
+            moreInfo='When this setting is enabled, workflows of the project you are switching to will be loaded immediately.
+                      Otherwise, they will be loaded when you will actually switch to them.'
+          >
+            <select id="activate-workflows-on-project-switch" aria-label="Activate Workflows on Project Switch" value={convertBoolToStr(appConfig.memSaver.activateWorkflowsOnProjectSwitch)} onChange={e => updateSettings({
+              ...appConfig,
+              memSaver: {
+                ...appConfig.memSaver,
+                activateWorkflowsOnProjectSwitch: convertStrToBool(e.target.value)
+              }
+            })}>
+              {activateOnProjectSwitchOptions.map(item=>(
+                <option key={convertBoolToStr(item.val)} value={convertBoolToStr(item.val)}>{item.name}</option>
+              ))}
+            </select>
+          </SettingBlock>
+
+          <PopupDomainSettings 
+            popupDomains={appConfig.popupDomains}
+            updatePopupDomains={(domains) => updateSettings({
+              ...appConfig,
+              popupDomains: domains
+            })}
+          />
         </div>
       </SettingsScreen>)
     } else {
