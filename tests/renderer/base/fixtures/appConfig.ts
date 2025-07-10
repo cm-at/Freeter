@@ -12,7 +12,14 @@ const appConfig: AppConfig = {
     activateWorkflowsOnProjectSwitch: true,
     workflowInactiveAfter: -1
   },
-  uiTheme: 'light'
+  uiTheme: 'light',
+  popupDomains: [],
+  aiProviders: {
+    openaiApiKey: undefined,
+    anthropicApiKey: undefined,
+    googleApiKey: undefined,
+    xApiKey: undefined
+  }
 }
 
 export const fixtureAppConfig = (testData?: Partial<AppConfig>): AppConfig => deepFreeze({

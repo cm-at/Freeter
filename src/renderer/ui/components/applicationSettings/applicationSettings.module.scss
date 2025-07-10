@@ -4,9 +4,138 @@
  */
 
 .settings-editor {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left:0;
-  right:0;
+  padding: 4px;
+}
+
+.settings-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.settings-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--freeter-border);
+  background-color: var(--freeter-componentBackground);
+  padding: 0 8px;
+  margin-bottom: 0;
+}
+
+.settings-tab {
+  padding: 10px 20px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--freeter-componentColor);
+  transition: all 0.2s ease;
+  
+  &:hover {
+    color: var(--freeter-primary);
+    background-color: var(--freeter-listHoverBackground);
+  }
+  
+  &-active {
+    color: var(--freeter-primary);
+    border-bottom-color: var(--freeter-primary);
+    font-weight: 500;
+  }
+}
+
+.ai-providers-intro {
+  margin-bottom: 20px;
+  padding: 12px;
+  background-color: var(--freeter-infoBackground);
+  border-radius: 4px;
+  
+  p {
+    margin: 0 0 8px 0;
+    color: var(--freeter-infoColor);
+    font-size: 13px;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+.api-key-input-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.api-key-input {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--freeter-inputBorder);
+  border-radius: 4px;
+  background-color: var(--freeter-inputBackground);
+  color: var(--freeter-inputColor);
+  font-family: monospace;
+  font-size: 13px;
+  
+  &:focus {
+    outline: none;
+    border-color: var(--freeter-primary);
+  }
+}
+
+.show-hide-button {
+  padding: 6px 12px;
+  background-color: var(--freeter-buttonBackground);
+  color: var(--freeter-buttonColor);
+  border: 1px solid var(--freeter-buttonBorder);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+  
+  &:hover {
+    background-color: var(--freeter-buttonHoverBackground);
+  }
+}
+
+.docs-link {
+  padding: 6px 12px;
+  background-color: var(--freeter-primary);
+  color: var(--freeter-primaryContrastColor);
+  text-decoration: none;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  
+  &:hover {
+    background-color: var(--freeter-primaryHover);
+  }
+}
+
+.api-key-status {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--freeter-successColor);
+}
+
+.status-icon {
+  color: var(--freeter-successColor);
+}
+
+.security-note {
+  padding: 12px;
+  background-color: var(--freeter-warningBackground);
+  border-radius: 4px;
+  
+  p {
+    margin: 0 0 8px 0;
+    color: var(--freeter-warningColor);
+    font-size: 13px;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
 }

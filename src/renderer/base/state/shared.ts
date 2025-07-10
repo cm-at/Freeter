@@ -12,6 +12,9 @@ export interface SharedState {
     apps: EntitiesState['apps'];
     appIds: UiState['apps']['appIds'];
   };
+  readonly appConfig: {
+    aiProviders: UiState['appConfig']['aiProviders'];
+  };
 }
 
 export type SharedStateSliceName = keyof SharedState;
@@ -25,6 +28,9 @@ const sharedStateSliceFactories: SharedStateSliceFactories = {
   apps: appState => ({
     appIds: appState.ui.apps.appIds,
     apps: appState.entities.apps
+  }),
+  appConfig: appState => ({
+    aiProviders: appState.ui.appConfig.aiProviders
   })
 }
 

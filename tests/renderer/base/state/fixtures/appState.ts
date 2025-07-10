@@ -23,7 +23,14 @@ const appState: AppState = {
         activateWorkflowsOnProjectSwitch: true,
         workflowInactiveAfter: -1
       },
-      uiTheme: 'light'
+      uiTheme: 'light',
+      popupDomains: [],
+      aiProviders: {
+        openaiApiKey: undefined,
+        anthropicApiKey: undefined,
+        googleApiKey: undefined,
+        xApiKey: undefined
+      }
     },
     apps: {
       appIds: [],
@@ -40,6 +47,7 @@ const appState: AppState = {
     },
     memSaver: {
       activeWorkflows: [],
+      loadedWorkflows: [],
       workflowTimeouts: {}
     },
     modalScreens: {

@@ -237,7 +237,13 @@ export function createUiState(): UiState {
         workflowInactiveAfter: -1
       },
       uiTheme: defaultUiThemeId,
-      popupDomains: [...defaultPopupDomainPatterns]
+      popupDomains: [...defaultPopupDomainPatterns],
+      aiProviders: {
+        openaiApiKey: undefined,
+        anthropicApiKey: undefined,
+        googleApiKey: undefined,
+        xApiKey: undefined
+      }
     },
     apps: {
       appIds: []

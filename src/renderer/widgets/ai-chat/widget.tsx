@@ -27,12 +27,15 @@ import { MessageSquare, Plus, Paperclip, Send, X, Bot, User } from 'lucide-react
 import clsx from 'clsx';
 import styles from './widget.module.scss';
 
-function WidgetComp({ widgetApi, settings, env }: WidgetReactComponentProps<Settings>) {
+function WidgetComp({ widgetApi, settings, env, sharedState }: WidgetReactComponentProps<Settings>) {
   const { dataStorage } = widgetApi;
   const [chatState, setChatState] = useState<ChatState>({ sessions: [], activeSessionId: null });
   const [isLoading, setIsLoading] = useState(true);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  // Get API keys from shared state
+  const apiKeys = sharedState?.appConfig?.aiProviders || {};
 
   // Load chat state on mount
   useEffect(() => {
@@ -56,6 +59,18 @@ function WidgetComp({ widgetApi, settings, env }: WidgetReactComponentProps<Sett
     ? findSessionById(chatState, chatState.activeSessionId)
     : null;
 
+  // Get the appropriate API key for the provider
+  const currentProvider = activeSession?.provider || settings.provider;
+  const getApiKey = (provider: AIProvider): string | undefined => {
+    switch (provider) {
+      case 'openai': return apiKeys.openaiApiKey;
+      case 'claude': return apiKeys.anthropicApiKey;
+      case 'gemini': return apiKeys.googleApiKey;
+      case 'grok': return apiKeys.xApiKey;
+      default: return undefined;
+    }
+  };
+
   // Configure useAIChat hook
   const {
     messages,
@@ -67,11 +82,12 @@ function WidgetComp({ widgetApi, settings, env }: WidgetReactComponentProps<Sett
     setMessages,
     append
   } = useAIChat({
-    provider: activeSession?.provider || settings.provider,
+    provider: currentProvider,
     model: activeSession?.model || settings.model,
     temperature: settings.temperature,
     maxTokens: settings.maxTokens,
     streamResponse: settings.streamResponse,
+    apiKey: getApiKey(currentProvider),
     initialMessages: activeSession?.messages || [],
     onFinish: (message: Message) => {
       if (activeSession) {
@@ -169,6 +185,20 @@ function WidgetComp({ widgetApi, settings, env }: WidgetReactComponentProps<Sett
     return (
       <div className={styles.container}>
         <div className={styles.loading}>Loading chat history...</div>
+      </div>
+    );
+  }
+
+  // Check if API key is configured
+  const currentApiKey = getApiKey(currentProvider);
+  if (!currentApiKey) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.noApiKey}>
+          <MessageSquare size={48} />
+          <h3>API Key Required</h3>
+          <p>Please configure your {PROVIDER_CONFIGS[currentProvider].name} API key in Freeter Settings → AI Providers to use this widget.</p>
+        </div>
       </div>
     );
   }

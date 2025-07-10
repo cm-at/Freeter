@@ -354,6 +354,36 @@
   }
 }
 
+.noApiKey {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 20px;
+  text-align: center;
+  color: var(--color-fg-2);
+  
+  svg {
+    margin-bottom: 16px;
+    color: var(--color-fg-3);
+  }
+  
+  h3 {
+    margin: 0 0 8px 0;
+    font-size: 1.2em;
+    font-weight: 500;
+    color: var(--color-fg-1);
+  }
+  
+  p {
+    margin: 0;
+    font-size: 0.95em;
+    max-width: 400px;
+    line-height: 1.5;
+  }
+}
+
 /* Compact mode styles */
 .compact {
   .chatArea {

@@ -11,11 +11,19 @@ export interface PopupDomainPattern {
   enabled: boolean;
 }
 
+export interface AIProviderConfig {
+  openaiApiKey?: string;
+  anthropicApiKey?: string;
+  googleApiKey?: string;
+  xApiKey?: string;
+}
+
 export interface AppConfig {
   mainHotkey: string;
   memSaver: MemSaverConfigApp;
   uiTheme: string;
   popupDomains: PopupDomainPattern[];
+  aiProviders: AIProviderConfig;
 }
 
 export const defaultPopupDomainPatterns: PopupDomainPattern[] = [
