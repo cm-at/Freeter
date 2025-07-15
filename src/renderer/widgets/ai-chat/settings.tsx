@@ -6,6 +6,7 @@
 import { CreateSettingsState, ReactComponent, SettingBlock, SettingsEditorReactComponentProps } from '@/widgets/appModules';
 import { AIProvider } from './types';
 import { PROVIDER_CONFIGS } from './utils/providers';
+import styles from './settings.module.scss';
 
 export interface Settings {
   provider: AIProvider;
@@ -41,16 +42,17 @@ function SettingsEditorComp({ settings, settingsApi }: SettingsEditorReactCompon
   };
 
   return (
-    <>
+    <div className={styles['settings-container']}>
       <SettingBlock
         titleForId='ai-provider'
         title='AI Provider'
+        moreInfo='Select your preferred AI service provider'
       >
         <select
           id='ai-provider'
           value={settings.provider}
           onChange={(e) => handleProviderChange(e.target.value as AIProvider)}
-          style={{ width: '100%', padding: '4px' }}
+          className={styles['select-input']}
           aria-label='AI Provider selection'
         >
           {Object.entries(PROVIDER_CONFIGS).map(([key, config]) => (
@@ -62,12 +64,13 @@ function SettingsEditorComp({ settings, settingsApi }: SettingsEditorReactCompon
       <SettingBlock
         titleForId='ai-model'
         title='Model'
+        moreInfo='Choose the AI model to use for this provider'
       >
         <select
           id='ai-model'
           value={settings.model}
           onChange={(e) => updateSettings({ ...settings, model: e.target.value })}
-          style={{ width: '100%', padding: '4px' }}
+          className={styles['select-input']}
           aria-label='AI Model selection'
         >
           {providerConfig.models.map(model => (
@@ -81,7 +84,7 @@ function SettingsEditorComp({ settings, settingsApi }: SettingsEditorReactCompon
         title='Temperature'
         moreInfo='Controls randomness: 0 = focused, 1 = creative'
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className={styles['range-container']}>
           <input
             type='range'
             id='temperature'
@@ -90,10 +93,10 @@ function SettingsEditorComp({ settings, settingsApi }: SettingsEditorReactCompon
             step='0.1'
             value={settings.temperature}
             onChange={(e) => updateSettings({ ...settings, temperature: parseFloat(e.target.value) })}
-            style={{ flex: 1 }}
+            className={styles['range-input']}
             aria-label='Temperature slider'
           />
-          <span style={{ minWidth: '30px' }}>{settings.temperature.toFixed(1)}</span>
+          <span className={styles['range-value']}>{settings.temperature.toFixed(1)}</span>
         </div>
       </SettingBlock>
 
@@ -110,7 +113,7 @@ function SettingsEditorComp({ settings, settingsApi }: SettingsEditorReactCompon
           step='256'
           value={settings.maxTokens}
           onChange={(e) => updateSettings({ ...settings, maxTokens: parseInt(e.target.value) || 2048 })}
-          style={{ width: '100%', padding: '4px' }}
+          className={styles['number-input']}
           aria-label='Max tokens input'
         />
       </SettingBlock>
@@ -118,45 +121,51 @@ function SettingsEditorComp({ settings, settingsApi }: SettingsEditorReactCompon
       <SettingBlock
         titleForId='stream-response'
         title='Response Streaming'
+        moreInfo='Show responses as they are generated'
       >
-        <label>
+        <label className={styles['checkbox-container']}>
           <input
             type='checkbox'
             id='stream-response'
             checked={settings.streamResponse}
             onChange={() => updateSettings({ ...settings, streamResponse: !settings.streamResponse })}
+            className={styles['checkbox-input']}
           />
-          Stream responses in real-time
+          <span className={styles['checkbox-label']}>Stream responses in real-time</span>
         </label>
       </SettingBlock>
 
       <SettingBlock
         titleForId='show-sidebar'
         title='Chat Sidebar'
+        moreInfo='Toggle the chat history sidebar'
       >
-        <label>
+        <label className={styles['checkbox-container']}>
           <input
             type='checkbox'
             id='show-sidebar'
             checked={settings.showSidebar}
             onChange={() => updateSettings({ ...settings, showSidebar: !settings.showSidebar })}
+            className={styles['checkbox-input']}
           />
-          Show chat history sidebar
+          <span className={styles['checkbox-label']}>Show chat history sidebar</span>
         </label>
       </SettingBlock>
 
       <SettingBlock
         titleForId='compact-mode'
         title='Compact Mode'
+        moreInfo='Reduce spacing for a more compact interface'
       >
-        <label>
+        <label className={styles['checkbox-container']}>
           <input
             type='checkbox'
             id='compact-mode'
             checked={settings.compactMode}
             onChange={() => updateSettings({ ...settings, compactMode: !settings.compactMode })}
+            className={styles['checkbox-input']}
           />
-          Use compact UI layout
+          <span className={styles['checkbox-label']}>Use compact UI layout</span>
         </label>
       </SettingBlock>
 
@@ -165,11 +174,11 @@ function SettingsEditorComp({ settings, settingsApi }: SettingsEditorReactCompon
         title='API Keys'
         moreInfo='API keys are managed in the main Freeter application settings'
       >
-        <div style={{ padding: '8px', backgroundColor: '#f5f5f5', borderRadius: '4px', fontSize: '0.9em' }}>
-          To add API keys for your chosen provider, go to Freeter Settings → AI Providers
+        <div className={styles['info-box']}>
+          To add API keys for your chosen provider, go to <strong>Freeter Settings → AI Providers</strong>
         </div>
       </SettingBlock>
-    </>
+    </div>
   );
 }
 

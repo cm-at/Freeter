@@ -111,13 +111,29 @@ function WidgetComp({ widgetApi, settings, env, sharedState }: WidgetReactCompon
 
   // Create new chat session
   const handleNewChat = useCallback(() => {
-    const newSession = createNewSession(settings.provider, settings.model);
+    // Find a provider with an API key configured
+    let selectedProvider = settings.provider;
+    let selectedModel = settings.model;
+    
+    // Check if the default provider has an API key
+    if (!getApiKey(selectedProvider)) {
+      // Find the first provider with an API key
+      for (const provider of ['claude', 'openai', 'gemini', 'grok'] as AIProvider[]) {
+        if (getApiKey(provider)) {
+          selectedProvider = provider;
+          selectedModel = PROVIDER_CONFIGS[provider].defaultModel;
+          break;
+        }
+      }
+    }
+    
+    const newSession = createNewSession(selectedProvider, selectedModel);
     setChatState({
       sessions: [newSession, ...chatState.sessions],
       activeSessionId: newSession.id
     });
     setMessages([]);
-  }, [chatState.sessions, settings.provider, settings.model, setMessages]);
+  }, [chatState.sessions, settings.provider, settings.model, setMessages, apiKeys]);
 
   // Select a chat session
   const handleSelectSession = useCallback((sessionId: string) => {

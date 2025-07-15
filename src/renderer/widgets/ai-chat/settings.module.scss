@@ -1,0 +1,186 @@
+/*
+ * Copyright: (c) 2024, Alex Kaul
+ * GNU General Public License v3.0 or later (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+ */
+
+.settings-container {
+  padding: 8px;
+}
+
+.select-input {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 14px;
+  background-color: var(--freeter-inputBackground);
+  border: 1px solid var(--freeter-border);
+  border-radius: 6px;
+  color: var(--freeter-componentColor);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    border-color: var(--freeter-borderHover);
+  }
+  
+  &:focus {
+    outline: none;
+    border-color: var(--freeter-primary);
+    box-shadow: 0 0 0 3px rgba(var(--freeter-primary-rgb), 0.1);
+  }
+}
+
+.range-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.range-input {
+  flex: 1;
+  height: 6px;
+  background: var(--freeter-inputBackground);
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  
+  &::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background: var(--freeter-primary);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    
+    &:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 0 4px rgba(var(--freeter-primary-rgb), 0.2);
+    }
+  }
+  
+  &::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: var(--freeter-primary);
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+    
+    &:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 0 4px rgba(var(--freeter-primary-rgb), 0.2);
+    }
+  }
+}
+
+.range-value {
+  min-width: 40px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--freeter-primary);
+  background: var(--freeter-inputBackground);
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.number-input {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 14px;
+  background-color: var(--freeter-inputBackground);
+  border: 1px solid var(--freeter-border);
+  border-radius: 6px;
+  color: var(--freeter-componentColor);
+  transition: all 0.2s ease;
+  
+  &:hover {
+    border-color: var(--freeter-borderHover);
+  }
+  
+  &:focus {
+    outline: none;
+    border-color: var(--freeter-primary);
+    box-shadow: 0 0 0 3px rgba(var(--freeter-primary-rgb), 0.1);
+  }
+  
+  &::-webkit-inner-spin-button,
+  &::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+}
+
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  
+  &:hover .checkbox-input:not(:checked) {
+    border-color: var(--freeter-primary);
+  }
+}
+
+.checkbox-input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  cursor: pointer;
+  appearance: none;
+  background: var(--freeter-inputBackground);
+  border: 2px solid var(--freeter-border);
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  position: relative;
+  
+  &:checked {
+    background: var(--freeter-primary);
+    border-color: var(--freeter-primary);
+    
+    &::after {
+      content: '';
+      position: absolute;
+      left: 5px;
+      top: 2px;
+      width: 4px;
+      height: 8px;
+      border: solid white;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+  }
+  
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(var(--freeter-primary-rgb), 0.2);
+  }
+}
+
+.checkbox-label {
+  font-size: 14px;
+  color: var(--freeter-componentColor);
+}
+
+.info-box {
+  padding: 12px 16px;
+  background-color: var(--freeter-infoBg);
+  border: 1px solid var(--freeter-infoBorder);
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--freeter-infoText);
+  
+  a {
+    color: var(--freeter-primary);
+    text-decoration: none;
+    
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+} 
