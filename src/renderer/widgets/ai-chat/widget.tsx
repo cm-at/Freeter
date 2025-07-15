@@ -33,6 +33,7 @@ import { ChatExport } from './components/ChatExport';
 import { KeyboardShortcuts } from './components/KeyboardShortcuts';
 import { ScrollToBottom } from './components/ScrollToBottom';
 import { CodeBlock } from './components/CodeBlock';
+import { ModelSelector } from './components/ModelSelector';
 
 function WidgetComp({ widgetApi, settings, env, sharedState }: WidgetReactComponentProps<Settings>) {
   const { dataStorage } = widgetApi;
@@ -172,30 +173,27 @@ function WidgetComp({ widgetApi, settings, env, sharedState }: WidgetReactCompon
   }, [activeSession?.id, setChatMessages]);
 
   // Create new chat session
-  const handleNewChat = useCallback(() => {
-    // Find a provider with an API key configured
-    let selectedProvider = settings.provider;
-    let selectedModel = settings.model;
+  const handleNewChat = useCallback(async () => {
+    const availableProvider = getFirstAvailableProvider();
+    if (!availableProvider) return;
     
-    // Check if the default provider has an API key
-    if (!getApiKey(selectedProvider)) {
-      // Find the first provider with an API key
-      for (const provider of ['claude', 'openai', 'gemini', 'grok'] as AIProvider[]) {
-        if (getApiKey(provider)) {
-          selectedProvider = provider;
-          selectedModel = PROVIDER_CONFIGS[provider].defaultModel;
-          break;
-        }
-      }
+    const newSession = createNewSession(availableProvider, settings.model);
+    const newState = { ...chatState, sessions: [...chatState.sessions, newSession], activeSessionId: newSession.id };
+    setChatState(newState);
+    await saveChatState(widgetApi, newState);
+    setChatMessages([]);
+    setInput('');
+  }, [chatState, widgetApi, settings.model, getFirstAvailableProvider]);
+
+  // Quick model change
+  const handleQuickModelChange = useCallback((newModel: string) => {
+    if (activeSession) {
+      const updatedSession = { ...activeSession, model: newModel };
+      const newState = updateSession(chatState, activeSession.id, { model: newModel });
+      setChatState(newState);
+      saveChatState(widgetApi, newState);
     }
-    
-    const newSession = createNewSession(selectedProvider, selectedModel);
-    setChatState({
-      sessions: [newSession, ...chatState.sessions],
-      activeSessionId: newSession.id
-    });
-    setMessages([]);
-  }, [chatState.sessions, settings.provider, settings.model, setMessages, apiKeys]);
+  }, [activeSession, chatState, widgetApi]);
 
   // Select a chat session
   const handleSelectSession = useCallback((sessionId: string) => {
@@ -493,6 +491,15 @@ function WidgetComp({ widgetApi, settings, env, sharedState }: WidgetReactCompon
                 {activeSession.messages.length} messages
               </span>
             </div>
+          )}
+          
+          {activeSession && effectiveProvider && (
+            <ModelSelector
+              provider={effectiveProvider}
+              model={activeSession.model}
+              onModelChange={handleQuickModelChange}
+              compact
+            />
           )}
           
           <div className={styles.headerActions}>

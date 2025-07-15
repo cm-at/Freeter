@@ -1,0 +1,55 @@
+/*
+ * Copyright: (c) 2024, Alex Kaul
+ * GNU General Public License v3.0 or later (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+ */
+
+.selector {
+  position: relative;
+  display: inline-block;
+  
+  &.compact {
+    .select {
+      padding: 6px 28px 6px 10px;
+      font-size: 0.85em;
+    }
+  }
+}
+
+.select {
+  appearance: none;
+  padding: 8px 32px 8px 12px;
+  background-color: var(--color-bg-2);
+  border: 1px solid var(--color-border-1);
+  border-radius: 8px;
+  color: var(--color-fg-1);
+  font-size: 0.9em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 150px;
+  
+  &:hover {
+    background-color: var(--color-bg-3);
+    border-color: var(--color-border-2);
+  }
+  
+  &:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-alpha-20);
+  }
+  
+  option {
+    background-color: var(--color-bg-2);
+    color: var(--color-fg-1);
+  }
+}
+
+.icon {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--color-fg-3);
+} 
