@@ -37,6 +37,10 @@ function WidgetComp({ widgetApi, settings, env, sharedState }: WidgetReactCompon
   // Get API keys from shared state
   const apiKeys = sharedState?.appConfig?.aiProviders || {};
 
+  // Debug logging
+  console.log('[AI Chat Widget] API Keys from shared state:', apiKeys);
+  console.log('[AI Chat Widget] Settings provider:', settings.provider);
+
   // Get the appropriate API key for the provider
   const getApiKey = useCallback((provider: AIProvider): string | undefined => {
     switch (provider) {
@@ -52,7 +56,9 @@ function WidgetComp({ widgetApi, settings, env, sharedState }: WidgetReactCompon
   const getFirstAvailableProvider = useCallback((): AIProvider | null => {
     const providers: AIProvider[] = ['openai', 'claude', 'gemini', 'grok'];
     for (const provider of providers) {
-      if (getApiKey(provider)) {
+      const key = getApiKey(provider);
+      console.log(`[AI Chat Widget] Checking ${provider}: ${key ? 'Has API key' : 'No API key'}`);
+      if (key) {
         return provider;
       }
     }
@@ -90,6 +96,11 @@ function WidgetComp({ widgetApi, settings, env, sharedState }: WidgetReactCompon
   const currentProvider = activeSession?.provider || settings.provider;
   const hasConfiguredApiKey = getApiKey(currentProvider);
   const effectiveProvider = hasConfiguredApiKey ? currentProvider : getFirstAvailableProvider();
+  
+  console.log('[AI Chat Widget] Current provider:', currentProvider);
+  console.log('[AI Chat Widget] Has configured API key:', hasConfiguredApiKey);
+  console.log('[AI Chat Widget] Effective provider:', effectiveProvider);
+  console.log('[AI Chat Widget] API key for effective provider:', effectiveProvider ? getApiKey(effectiveProvider) : 'none');
   
   // Configure useAIChat hook
   const {

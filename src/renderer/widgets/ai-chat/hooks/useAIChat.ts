@@ -41,12 +41,17 @@ export function useAIChat({
   const streamMockResponse = useCallback(async (userMessage: Message) => {
     const mockResponse = `This is a mock response to: "${userMessage.content}". 
 
-To use real AI providers:
-1. Add your API key in Freeter Settings → AI Providers
-2. The widget will automatically use the configured provider (${provider})
-3. Selected model: ${model}
+**Note: This is a demo implementation**
+- Your ${provider.toUpperCase()} API key is configured ✓
+- Selected model: ${model}
+- However, actual API integration is not yet implemented
 
-For now, this is just a demo showing the chat interface functionality.`;
+The real implementation would:
+- Make actual API calls to ${provider === 'claude' ? 'Anthropic' : provider === 'openai' ? 'OpenAI' : provider.charAt(0).toUpperCase() + provider.slice(1)}
+- Stream real AI responses
+- Support all configured features like temperature (${temperature}) and max tokens (${maxTokens})
+
+For now, this demo shows the chat interface functionality with mock responses.`;
 
     // Create assistant message
     const assistantMessage: Message = {
