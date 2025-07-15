@@ -1,0 +1,48 @@
+/*
+ * Copyright: (c) 2024, Alex Kaul
+ * GNU General Public License v3.0 or later (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+ */
+
+.scrollButton {
+  position: absolute;
+  bottom: 100px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  background-color: var(--color-bg-2);
+  border: 1px solid var(--color-border-1);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(10px);
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  
+  &.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+  
+  &:hover {
+    background-color: var(--color-primary);
+    color: var(--color-fg-contrast);
+    border-color: var(--color-primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+  
+  &:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  }
+  
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+} 

@@ -23,13 +23,16 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { MessageSquare, Plus, Paperclip, Send, X, Bot, User, AlertCircle, Check, Edit3, RefreshCw, Download, MoreVertical } from 'lucide-react';
+import { MessageSquare, Plus, Paperclip, Send, X, Bot, User, AlertCircle, Check, Edit3, RefreshCw, Download, MoreVertical, Keyboard, ChevronDown } from 'lucide-react';
 import clsx from 'clsx';
 import styles from './widget.module.scss';
 import { TypingIndicator } from './components/TypingIndicator';
 import { MessageActions } from './components/MessageActions';
 import { FileUploadPreview, UploadedFile } from './components/FileUploadPreview';
 import { ChatExport } from './components/ChatExport';
+import { KeyboardShortcuts } from './components/KeyboardShortcuts';
+import { ScrollToBottom } from './components/ScrollToBottom';
+import { CodeBlock } from './components/CodeBlock';
 
 function WidgetComp({ widgetApi, settings, env, sharedState }: WidgetReactComponentProps<Settings>) {
   const { dataStorage } = widgetApi;
@@ -41,8 +44,11 @@ function WidgetComp({ widgetApi, settings, env, sharedState }: WidgetReactCompon
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
+  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
+  const [showScrollButton, setShowScrollButton] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatAreaRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   // Get API keys from shared state
@@ -289,6 +295,72 @@ function WidgetComp({ widgetApi, settings, env, sharedState }: WidgetReactCompon
     return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
   }, []);
 
+  // Scroll functionality
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
+
+  const handleScroll = useCallback(() => {
+    if (chatAreaRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = chatAreaRef.current;
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+      setShowScrollButton(!isNearBottom);
+    }
+  }, []);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyboardShortcuts = (e: globalThis.KeyboardEvent) => {
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
+
+      if (cmdOrCtrl) {
+        switch (e.key) {
+          case '/':
+            e.preventDefault();
+            setIsSidebarCollapsed(prev => !prev);
+            break;
+          case 'k':
+            e.preventDefault();
+            if (window.confirm('Clear all messages in this chat?')) {
+              setChatMessages([]);
+            }
+            break;
+          case 'e':
+            e.preventDefault();
+            if (activeSession && activeSession.messages.length > 0) {
+              setShowExportMenu(prev => !prev);
+            }
+            break;
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyboardShortcuts);
+    return () => window.removeEventListener('keydown', handleKeyboardShortcuts);
+  }, [activeSession, setChatMessages]);
+
+  // Auto scroll to bottom on new messages
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, scrollToBottom]);
+
+  // Click outside to close dropdowns
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest(`.${styles.exportWrapper}`)) {
+        setShowExportMenu(false);
+      }
+      if (!target.closest(`.${styles.shortcutsWrapper}`)) {
+        setShowKeyboardShortcuts(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   // Auto-resize textarea
   useEffect(() => {
     if (textareaRef.current) {
@@ -443,10 +515,25 @@ function WidgetComp({ widgetApi, settings, env, sharedState }: WidgetReactCompon
                 )}
               </div>
             )}
+            
+            <div className={styles.shortcutsWrapper}>
+              <button
+                className={styles.shortcutsButton}
+                onClick={() => setShowKeyboardShortcuts(!showKeyboardShortcuts)}
+                aria-label="Keyboard shortcuts"
+              >
+                <Keyboard size={18} />
+              </button>
+              {showKeyboardShortcuts && (
+                <div className={styles.shortcutsDropdown}>
+                  <KeyboardShortcuts />
+                </div>
+              )}
+            </div>
           </div>
         </div>
         
-        <div className={styles.chatArea}>
+        <div className={styles.chatArea} ref={chatAreaRef} onScroll={handleScroll}>
           {messages.length === 0 ? (
             <div className={styles.empty}>
               <MessageSquare size={56} />
@@ -490,16 +577,16 @@ function WidgetComp({ widgetApi, settings, env, sharedState }: WidgetReactCompon
                             code({node, className, children, ...props}: any) {
                               const match = /language-(\w+)/.exec(className || '');
                               const inline = node?.type === 'element' && node?.tagName !== 'pre';
-                              return !inline && match ? (
-                                <SyntaxHighlighter
-                                  style={oneDark as any}
-                                  language={match[1]}
-                                  PreTag="div"
-                                  {...props}
-                                >
-                                  {String(children).replace(/\n$/, '')}
-                                </SyntaxHighlighter>
-                              ) : (
+                              
+                              if (!inline && match) {
+                                return (
+                                  <CodeBlock language={match[1]}>
+                                    {String(children).replace(/\n$/, '')}
+                                  </CodeBlock>
+                                );
+                              }
+                              
+                              return (
                                 <code className={className} {...props}>
                                   {children}
                                 </code>
@@ -538,6 +625,7 @@ function WidgetComp({ widgetApi, settings, env, sharedState }: WidgetReactCompon
                   </div>
                 )}
               </div>
+              <div ref={messagesEndRef} />
             </>
           )}
           
@@ -552,6 +640,11 @@ function WidgetComp({ widgetApi, settings, env, sharedState }: WidgetReactCompon
             </div>
           )}
         </div>
+
+        {/* Scroll to bottom button */}
+        {showScrollButton && (
+          <ScrollToBottom visible={showScrollButton} onClick={scrollToBottom} />
+        )}
 
         {/* Input area */}
         <form onSubmit={handleSubmit} className={styles.inputArea}>
