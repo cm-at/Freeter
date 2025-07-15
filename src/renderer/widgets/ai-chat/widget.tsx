@@ -23,15 +23,26 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { MessageSquare, Plus, Paperclip, Send, X, Bot, User, AlertCircle } from 'lucide-react';
+import { MessageSquare, Plus, Paperclip, Send, X, Bot, User, AlertCircle, Check, Edit3, RefreshCw, Download, MoreVertical } from 'lucide-react';
 import clsx from 'clsx';
 import styles from './widget.module.scss';
+import { TypingIndicator } from './components/TypingIndicator';
+import { MessageActions } from './components/MessageActions';
+import { FileUploadPreview, UploadedFile } from './components/FileUploadPreview';
+import { ChatExport } from './components/ChatExport';
 
 function WidgetComp({ widgetApi, settings, env, sharedState }: WidgetReactComponentProps<Settings>) {
   const { dataStorage } = widgetApi;
   const [chatState, setChatState] = useState<ChatState>({ sessions: [], activeSessionId: null });
   const [isLoading, setIsLoading] = useState(true);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const chatAreaRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   // Get API keys from shared state
@@ -227,6 +238,57 @@ function WidgetComp({ widgetApi, settings, env, sharedState }: WidgetReactCompon
     }
   }, [handleSubmit]);
 
+  // File handling
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const newFiles: UploadedFile[] = files.map(file => ({
+      id: Math.random().toString(36).substring(7),
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined
+    }));
+    setUploadedFiles(prev => [...prev, ...newFiles]);
+  }, []);
+
+  const handleRemoveFile = useCallback((id: string) => {
+    setUploadedFiles(prev => {
+      const file = prev.find(f => f.id === id);
+      if (file?.preview) {
+        URL.revokeObjectURL(file.preview);
+      }
+      return prev.filter(f => f.id !== id);
+    });
+  }, []);
+
+  // Message actions
+  const handleRegenerateMessage = useCallback((messageIndex: number) => {
+    if (messageIndex > 0) {
+      const userMessage = messages[messageIndex - 1];
+      if (userMessage.role === 'user') {
+        // Remove AI response and regenerate
+        const newMessages = messages.slice(0, messageIndex);
+        setChatMessages(newMessages);
+        // Trigger regeneration by resending the last user message
+        setInput(userMessage.content);
+        setTimeout(() => {
+          handleSubmit({ preventDefault: () => {} } as any);
+        }, 100);
+      }
+    }
+  }, [messages, setChatMessages, handleSubmit, setInput]);
+
+  const formatTimestamp = useCallback((timestamp: number) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+    
+    if (isToday) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  }, []);
+
   // Auto-resize textarea
   useEffect(() => {
     if (textareaRef.current) {
@@ -272,48 +334,118 @@ function WidgetComp({ widgetApi, settings, env, sharedState }: WidgetReactCompon
   return (
     <div className={clsx(styles.container, settings.compactMode && styles.compact)}>
       {/* Sidebar */}
-      {!env.isPreview && (
-        <aside className={clsx(styles.sidebar, isSidebarCollapsed && styles.hidden)}>
+      {!isSidebarCollapsed && (
+        <div className={styles.sidebar}>
           <div className={styles.sidebarHeader}>
             <h3>Chats</h3>
-            <button 
-              className={styles.newChatButton}
-              onClick={handleNewChat}
-              aria-label="New chat"
-            >
-              <Plus size={16} />
+            <button onClick={handleNewChat} disabled={!env.isPreview} aria-label="New chat">
+              <Plus size={18} />
               New
             </button>
           </div>
-          <div className={styles.chatList}>
-            {chatState.sessions.map(session => (
-              <div
-                key={session.id}
-                className={clsx(
-                  styles.chatItem,
-                  session.id === chatState.activeSessionId && styles.active
-                )}
-                onClick={() => handleSelectSession(session.id)}
-              >
-                <div className={styles.chatTitle}>{session.title}</div>
-                <div className={styles.chatDate}>
-                  {new Date(session.updatedAt).toLocaleDateString()}
-                </div>
-                <button
-                  className={styles.deleteButton}
-                  onClick={(e) => handleDeleteSession(session.id, e)}
-                  aria-label="Delete chat"
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            ))}
+          
+          <div className={styles.searchBox}>
+            <input
+              type="text"
+              placeholder="Search chats..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className={styles.searchInput}
+            />
           </div>
-        </aside>
+          
+          <div className={styles.chatList}>
+            {chatState.sessions
+              .filter(session => 
+                session.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                session.messages.some(msg => msg.content.toLowerCase().includes(searchQuery.toLowerCase()))
+              )
+              .sort((a, b) => b.updatedAt - a.updatedAt)
+              .map(session => {
+                const lastMessage = session.messages[session.messages.length - 1];
+                const isActive = session.id === chatState.activeSessionId;
+                
+                return (
+                  <div
+                    key={session.id}
+                    className={clsx(styles.chatItem, isActive && styles.active)}
+                    onClick={() => handleSelectSession(session.id)}
+                  >
+                    <div className={styles.chatItemContent}>
+                      <div className={styles.chatItemHeader}>
+                        <span className={styles.chatItemTitle}>{session.title}</span>
+                        <span className={styles.chatItemTime}>
+                          {formatTimestamp(session.updatedAt)}
+                        </span>
+                      </div>
+                      {lastMessage && (
+                        <div className={styles.chatItemPreview}>
+                          {lastMessage.content.substring(0, 50)}
+                          {lastMessage.content.length > 50 && '...'}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      className={styles.deleteButton}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteSession(session.id, e);
+                      }}
+                      disabled={env.isPreview}
+                      aria-label="Delete chat"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
       )}
 
       {/* Main chat area */}
       <main className={styles.main}>
+        <div className={styles.mainHeader}>
+          <button
+            className={styles.toggleSidebar}
+            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            aria-label={isSidebarCollapsed ? 'Show sidebar' : 'Hide sidebar'}
+          >
+            <MessageSquare size={20} />
+          </button>
+          
+          {activeSession && (
+            <div className={styles.sessionInfo}>
+              <h2>{activeSession.title}</h2>
+              <span className={styles.messageCount}>
+                {activeSession.messages.length} messages
+              </span>
+            </div>
+          )}
+          
+          <div className={styles.headerActions}>
+            {activeSession && activeSession.messages.length > 0 && (
+              <div className={styles.exportWrapper}>
+                <button
+                  className={styles.exportButton}
+                  onClick={() => setShowExportMenu(!showExportMenu)}
+                  aria-label="Export chat"
+                >
+                  <Download size={18} />
+                </button>
+                {showExportMenu && (
+                  <div className={styles.exportDropdown}>
+                    <ChatExport
+                      messages={activeSession.messages}
+                      sessionTitle={activeSession.title}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+        
         <div className={styles.chatArea}>
           {messages.length === 0 ? (
             <div className={styles.empty}>
@@ -328,43 +460,85 @@ function WidgetComp({ widgetApi, settings, env, sharedState }: WidgetReactCompon
               )}
             </div>
           ) : (
-            messages.map((message: Message, index: number) => (
-              <div 
-                key={message.id || index} 
-                className={clsx(styles.message, styles[message.role])}
-              >
-                <div className={styles.avatar}>
-                  {message.role === 'user' ? <User size={16} /> : <Bot size={16} />}
-                </div>
-                <div className={styles.messageContent}>
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    components={{
-                      code({node, className, children, ...props}: any) {
-                        const match = /language-(\w+)/.exec(className || '');
-                        const inline = node?.type === 'element' && node?.tagName !== 'pre';
-                        return !inline && match ? (
-                          <SyntaxHighlighter
-                            style={oneDark as any}
-                            language={match[1]}
-                            PreTag="div"
-                            {...props}
-                          >
-                            {String(children).replace(/\n$/, '')}
-                          </SyntaxHighlighter>
-                        ) : (
-                          <code className={className} {...props}>
-                            {children}
-                          </code>
-                        );
-                      }
-                    }}
+            <>
+              <div className={styles.messagesContainer}>
+                {messages.map((message: Message, index: number) => (
+                  <div 
+                    key={message.id || index} 
+                    className={clsx(styles.message, styles[message.role])}
+                    onMouseEnter={() => setHoveredMessageId(message.id || `${index}`)}
+                    onMouseLeave={() => setHoveredMessageId(null)}
                   >
-                    {message.content}
-                  </ReactMarkdown>
-                </div>
+                    <div className={styles.avatar}>
+                      {message.role === 'user' ? <User size={16} /> : <Bot size={16} />}
+                    </div>
+                    <div className={styles.messageWrapper}>
+                      <div className={styles.messageHeader}>
+                        <span className={styles.messageRole}>
+                          {message.role === 'user' ? 'You' : PROVIDER_CONFIGS[effectiveProvider || 'openai'].name}
+                        </span>
+                        {message.role === 'assistant' && effectiveProvider && (
+                          <span className={styles.providerBadge}>
+                            {effectiveProvider}
+                          </span>
+                        )}
+                      </div>
+                      <div className={styles.messageContent}>
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            code({node, className, children, ...props}: any) {
+                              const match = /language-(\w+)/.exec(className || '');
+                              const inline = node?.type === 'element' && node?.tagName !== 'pre';
+                              return !inline && match ? (
+                                <SyntaxHighlighter
+                                  style={oneDark as any}
+                                  language={match[1]}
+                                  PreTag="div"
+                                  {...props}
+                                >
+                                  {String(children).replace(/\n$/, '')}
+                                </SyntaxHighlighter>
+                              ) : (
+                                <code className={className} {...props}>
+                                  {children}
+                                </code>
+                              );
+                            }
+                          }}
+                        >
+                          {message.content}
+                        </ReactMarkdown>
+                      </div>
+                      {hoveredMessageId === (message.id || `${index}`) && (
+                        <MessageActions
+                          content={message.content}
+                          isUser={message.role === 'user'}
+                          onRegenerate={message.role === 'assistant' ? () => handleRegenerateMessage(index) : undefined}
+                          onEdit={message.role === 'user' ? () => setEditingMessageId(message.id || `${index}`) : undefined}
+                        />
+                      )}
+                    </div>
+                  </div>
+                ))}
+                
+                {isChatLoading && (
+                  <div className={clsx(styles.message, styles.assistant)}>
+                    <div className={styles.avatar}>
+                      <Bot size={16} />
+                    </div>
+                    <div className={styles.messageWrapper}>
+                      <div className={styles.messageHeader}>
+                        <span className={styles.messageRole}>
+                          {PROVIDER_CONFIGS[effectiveProvider || 'openai'].name}
+                        </span>
+                      </div>
+                      <TypingIndicator />
+                    </div>
+                  </div>
+                )}
               </div>
-            ))
+            </>
           )}
           
           {error && (
@@ -381,6 +555,7 @@ function WidgetComp({ widgetApi, settings, env, sharedState }: WidgetReactCompon
 
         {/* Input area */}
         <form onSubmit={handleSubmit} className={styles.inputArea}>
+          <FileUploadPreview files={uploadedFiles} onRemove={handleRemoveFile} />
           <div className={styles.inputContainer}>
             <div className={styles.textareaWrapper}>
               <textarea
@@ -394,12 +569,21 @@ function WidgetComp({ widgetApi, settings, env, sharedState }: WidgetReactCompon
                 disabled={isChatLoading}
               />
             </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              onChange={handleFileSelect}
+              style={{ display: 'none' }}
+              accept="image/*,.pdf,.txt,.doc,.docx"
+              aria-label="Upload files"
+            />
             <button
               type="button"
               className={styles.attachButton}
               aria-label="Attach file"
-              disabled
-              title="File attachments coming soon"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={env.isPreview}
             >
               <Paperclip size={18} />
             </button>

@@ -1,0 +1,42 @@
+/*
+ * Copyright: (c) 2024, Alex Kaul
+ * GNU General Public License v3.0 or later (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+ */
+
+.typingIndicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  background-color: var(--color-bg-2);
+  border-radius: 16px;
+  width: fit-content;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  background-color: var(--color-fg-3);
+  border-radius: 50%;
+  animation: typing 1.4s infinite ease-in-out;
+  
+  &:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+  
+  &:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+}
+
+@keyframes typing {
+  0%, 80%, 100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  
+  40% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+} 

@@ -1,0 +1,94 @@
+/*
+ * Copyright: (c) 2024, Alex Kaul
+ * GNU General Public License v3.0 or later (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+ */
+
+.preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px;
+  background-color: var(--color-bg-2);
+  border-radius: 12px;
+  margin-bottom: 12px;
+}
+
+.file {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background-color: var(--color-bg-1);
+  border: 1px solid var(--color-border-1);
+  border-radius: 8px;
+  max-width: 200px;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    border-color: var(--color-border-2);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    
+    .remove {
+      opacity: 1;
+    }
+  }
+}
+
+.thumbnail {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-bg-3);
+  border-radius: 4px;
+  color: var(--color-fg-3);
+}
+
+.info {
+  flex: 1;
+  min-width: 0;
+}
+
+.name {
+  font-size: 0.85em;
+  font-weight: 500;
+  color: var(--color-fg-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.size {
+  font-size: 0.75em;
+  color: var(--color-fg-3);
+  margin-top: 2px;
+}
+
+.remove {
+  padding: 4px;
+  background-color: transparent;
+  border: none;
+  color: var(--color-fg-3);
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.2s ease;
+  border-radius: 4px;
+  
+  &:hover {
+    background-color: var(--color-error-bg);
+    color: var(--color-error-fg);
+  }
+  
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+} 
