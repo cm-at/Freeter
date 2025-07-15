@@ -23,7 +23,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { MessageSquare, Plus, Paperclip, Send, X, Bot, User } from 'lucide-react';
+import { MessageSquare, Plus, Paperclip, Send, X, Bot, User, AlertCircle } from 'lucide-react';
 import clsx from 'clsx';
 import styles from './widget.module.scss';
 
@@ -36,6 +36,28 @@ function WidgetComp({ widgetApi, settings, env, sharedState }: WidgetReactCompon
   
   // Get API keys from shared state
   const apiKeys = sharedState?.appConfig?.aiProviders || {};
+
+  // Get the appropriate API key for the provider
+  const getApiKey = useCallback((provider: AIProvider): string | undefined => {
+    switch (provider) {
+      case 'openai': return apiKeys.openaiApiKey;
+      case 'claude': return apiKeys.anthropicApiKey;
+      case 'gemini': return apiKeys.googleApiKey;
+      case 'grok': return apiKeys.xApiKey;
+      default: return undefined;
+    }
+  }, [apiKeys]);
+
+  // Find first available provider with API key
+  const getFirstAvailableProvider = useCallback((): AIProvider | null => {
+    const providers: AIProvider[] = ['openai', 'claude', 'gemini', 'grok'];
+    for (const provider of providers) {
+      if (getApiKey(provider)) {
+        return provider;
+      }
+    }
+    return null;
+  }, [getApiKey]);
 
   // Load chat state on mount
   useEffect(() => {
@@ -54,23 +76,21 @@ function WidgetComp({ widgetApi, settings, env, sharedState }: WidgetReactCompon
     }
   }, [chatState, dataStorage, isLoading]);
 
-  // Get active session
-  const activeSession = chatState.activeSessionId 
-    ? findSessionById(chatState, chatState.activeSessionId)
-    : null;
-
-  // Get the appropriate API key for the provider
-  const currentProvider = activeSession?.provider || settings.provider;
-  const getApiKey = (provider: AIProvider): string | undefined => {
-    switch (provider) {
-      case 'openai': return apiKeys.openaiApiKey;
-      case 'claude': return apiKeys.anthropicApiKey;
-      case 'gemini': return apiKeys.googleApiKey;
-      case 'grok': return apiKeys.xApiKey;
-      default: return undefined;
+  // Get current session
+  const activeSession = findSessionById(chatState, chatState.activeSessionId || '');
+  const setMessages = (messages: Message[]) => {
+    if (activeSession) {
+      const updatedSession = { ...activeSession, messages, updatedAt: Date.now() };
+      const newState = updateSession(chatState, activeSession.id, { messages, updatedAt: Date.now() });
+      setChatState(newState);
     }
   };
 
+  // Determine current provider - use session provider, settings provider, or first available
+  const currentProvider = activeSession?.provider || settings.provider;
+  const hasConfiguredApiKey = getApiKey(currentProvider);
+  const effectiveProvider = hasConfiguredApiKey ? currentProvider : getFirstAvailableProvider();
+  
   // Configure useAIChat hook
   const {
     messages,
@@ -79,15 +99,17 @@ function WidgetComp({ widgetApi, settings, env, sharedState }: WidgetReactCompon
     handleSubmit: originalHandleSubmit,
     isLoading: isChatLoading,
     error,
-    setMessages,
-    append
+    setInput,
+    setMessages: setChatMessages,
+    reload,
+    stop
   } = useAIChat({
-    provider: currentProvider,
+    provider: effectiveProvider || 'openai', // fallback to openai if no keys configured
     model: activeSession?.model || settings.model,
     temperature: settings.temperature,
     maxTokens: settings.maxTokens,
     streamResponse: settings.streamResponse,
-    apiKey: getApiKey(currentProvider),
+    apiKey: effectiveProvider ? getApiKey(effectiveProvider) : '',
     initialMessages: activeSession?.messages || [],
     onFinish: (message: Message) => {
       if (activeSession) {
@@ -206,14 +228,19 @@ function WidgetComp({ widgetApi, settings, env, sharedState }: WidgetReactCompon
   }
 
   // Check if API key is configured
-  const currentApiKey = getApiKey(currentProvider);
+  const currentApiKey = effectiveProvider ? getApiKey(effectiveProvider) : null;
   if (!currentApiKey) {
+    const availableProvider = getFirstAvailableProvider();
     return (
       <div className={styles.container}>
         <div className={styles.noApiKey}>
           <MessageSquare size={48} />
           <h3>API Key Required</h3>
-          <p>Please configure your {PROVIDER_CONFIGS[currentProvider].name} API key in Freeter Settings → AI Providers to use this widget.</p>
+          {availableProvider ? (
+            <p>Please configure your {PROVIDER_CONFIGS[currentProvider].name} API key in Freeter Settings → AI Providers to use this widget.</p>
+          ) : (
+            <p>Please configure at least one AI provider API key in Freeter Settings → AI Providers to use this widget.</p>
+          )}
         </div>
       </div>
     );
@@ -267,9 +294,15 @@ function WidgetComp({ widgetApi, settings, env, sharedState }: WidgetReactCompon
         <div className={styles.chatArea}>
           {messages.length === 0 ? (
             <div className={styles.empty}>
-              <MessageSquare size={48} />
+              <MessageSquare size={56} />
               <h3>Start a new conversation</h3>
-              <p>Ask me anything! I'm here to help.</p>
+              <p>Choose an AI assistant and ask anything - I'm here to help with coding, writing, analysis, and more.</p>
+              {!env.isPreview && (
+                <button onClick={handleNewChat}>
+                  <Plus size={18} />
+                  New Chat
+                </button>
+              )}
             </div>
           ) : (
             messages.map((message: Message, index: number) => (
@@ -313,8 +346,11 @@ function WidgetComp({ widgetApi, settings, env, sharedState }: WidgetReactCompon
           
           {error && (
             <div className={clsx(styles.message, styles.error)}>
+              <div className={styles.avatar}>
+                <AlertCircle size={16} />
+              </div>
               <div className={styles.messageContent}>
-                Error: {error.message}
+                <strong>Error:</strong> {error.message}
               </div>
             </div>
           )}
@@ -350,7 +386,17 @@ function WidgetComp({ widgetApi, settings, env, sharedState }: WidgetReactCompon
               disabled={!input.trim() || isChatLoading}
               aria-label="Send message"
             >
-              <Send size={18} />
+              {isChatLoading ? (
+                <>
+                  <div className={styles.spinner} />
+                  <span>Sending...</span>
+                </>
+              ) : (
+                <>
+                  <Send size={18} />
+                  <span>Send</span>
+                </>
+              )}
             </button>
           </div>
         </form>
