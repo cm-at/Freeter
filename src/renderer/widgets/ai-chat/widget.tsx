@@ -106,30 +106,42 @@ function WidgetComp({ widgetApi, settings, env, sharedState }: WidgetReactCompon
   } = useAIChat({
     provider: effectiveProvider || 'openai', // fallback to openai if no keys configured
     model: activeSession?.model || settings.model,
+    apiKey: effectiveProvider ? getApiKey(effectiveProvider) : '',
     temperature: settings.temperature,
     maxTokens: settings.maxTokens,
     streamResponse: settings.streamResponse,
-    apiKey: effectiveProvider ? getApiKey(effectiveProvider) : '',
     initialMessages: activeSession?.messages || [],
     onFinish: (message: Message) => {
       if (activeSession) {
-        // Update session title if it's the first user message
+        // Get all current messages from the hook including the new one
+        const allMessages = [...messages, message];
+        
+        // Update session title if it's the first assistant response
         let updatedState = chatState;
-        if (activeSession.messages.length === 0 && message.role === 'user') {
+        if (activeSession.messages.length === 1 && message.role === 'assistant') {
+          const userMessage = activeSession.messages[0];
           updatedState = updateSession(chatState, activeSession.id, {
-            title: generateSessionTitle(message.content)
+            title: generateSessionTitle(userMessage.content)
           });
         }
         
         // Update messages
         updatedState = updateSession(updatedState, activeSession.id, {
-          messages: [...messages, message]
+          messages: allMessages,
+          updatedAt: Date.now()
         });
         
         setChatState(updatedState);
       }
     }
   });
+
+  // Sync messages from activeSession to chat hook when session changes
+  useEffect(() => {
+    if (activeSession) {
+      setChatMessages(activeSession.messages);
+    }
+  }, [activeSession?.id, setChatMessages]);
 
   // Create new chat session
   const handleNewChat = useCallback(() => {
