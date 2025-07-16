@@ -637,12 +637,10 @@ function WidgetComp({ widgetApi, settings, env, sharedState }: WidgetReactCompon
           )}
           
           {error && (
-            <div className={clsx(styles.message, styles.error)}>
-              <div className={styles.avatar}>
+            <div className={styles.errorMessage}>
+              <div className={styles.errorContent}>
                 <AlertCircle size={16} />
-              </div>
-              <div className={styles.messageContent}>
-                <strong>Error:</strong> {error.message}
+                <span>{error.message}</span>
               </div>
             </div>
           )}

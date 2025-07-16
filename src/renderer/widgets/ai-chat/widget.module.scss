@@ -851,3 +851,37 @@
     }
   }
 } 
+
+.scrollToBottom {
+  position: absolute;
+  bottom: 120px;
+  right: 20px;
+  z-index: 10;
+}
+
+.errorMessage {
+  position: absolute;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  padding: 12px 20px;
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  max-width: 90%;
+}
+
+.errorContent {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #ef4444;
+  font-size: 14px;
+  
+  svg {
+    flex-shrink: 0;
+  }
+} 

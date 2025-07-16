@@ -4,8 +4,13 @@
  */
 
 import { Message } from '@ai-sdk/react';
-import { useCallback, useState, useRef } from 'react';
+import { useCallback, useState, useRef, useEffect } from 'react';
 import { AIProvider } from '../types';
+import { streamText, CoreMessage } from 'ai';
+import { createOpenAI } from '@ai-sdk/openai';
+import { createAnthropic } from '@ai-sdk/anthropic';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { createXai } from '@ai-sdk/xai';
 
 interface UseAIChatOptions {
   provider: AIProvider;
@@ -33,74 +38,42 @@ export function useAIChat({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const [status, setStatus] = useState<'ready' | 'loading'>('ready');
 
   // Generate a unique ID for messages
   const generateId = () => `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-  // Mock streaming implementation
-  const streamMockResponse = useCallback(async (userMessage: Message) => {
-    const mockResponse = `This is a mock response to: "${userMessage.content}". 
-
-**Note: This is a demo implementation**
-- Your ${provider.toUpperCase()} API key is configured ✓
-- Selected model: ${model}
-- However, actual API integration is not yet implemented
-
-The real implementation would:
-- Make actual API calls to ${provider === 'claude' ? 'Anthropic' : provider === 'openai' ? 'OpenAI' : provider.charAt(0).toUpperCase() + provider.slice(1)}
-- Stream real AI responses
-- Support all configured features like temperature (${temperature}) and max tokens (${maxTokens})
-
-For now, this demo shows the chat interface functionality with mock responses.`;
-
-    // Create assistant message
-    const assistantMessage: Message = {
-      id: generateId(),
-      role: 'assistant',
-      content: '',
-      createdAt: new Date()
-    };
-
-    // Add assistant message to state
-    setMessages(prev => [...prev, assistantMessage]);
-
-    if (streamResponse) {
-      // Simulate streaming by adding words one at a time
-      const words = mockResponse.split(' ');
-      let currentContent = '';
-
-      for (let i = 0; i < words.length; i++) {
-        if (abortControllerRef.current?.signal.aborted) {
-          break;
-        }
-
-        currentContent += (i > 0 ? ' ' : '') + words[i];
-        
-        // Update message content
-        setMessages(prev => prev.map(msg => 
-          msg.id === assistantMessage.id 
-            ? { ...msg, content: currentContent }
-            : msg
-        ));
-
-        // Simulate network delay
-        await new Promise(resolve => setTimeout(resolve, 50));
-      }
-    } else {
-      // Add full response at once
-      setMessages(prev => prev.map(msg => 
-        msg.id === assistantMessage.id 
-          ? { ...msg, content: mockResponse }
-          : msg
-      ));
+  // Get the appropriate model based on provider
+  const getModel = useCallback(() => {
+    if (!apiKey) {
+      throw new Error(`No API key configured for ${provider}`);
     }
 
-    // Call onFinish callback
-    if (onFinish) {
-      const finalMessage = { ...assistantMessage, content: streamResponse ? mockResponse : mockResponse };
-      onFinish(finalMessage);
+    switch (provider) {
+      case 'openai':
+        const openai = createOpenAI({ apiKey });
+        return openai(model);
+      case 'claude':
+        const anthropic = createAnthropic({ apiKey });
+        return anthropic(model);
+      case 'gemini':
+        const google = createGoogleGenerativeAI({ apiKey });
+        return google(model);
+      case 'grok':
+        const xai = createXai({ apiKey });
+        return xai(model);
+      default:
+        throw new Error(`Unsupported provider: ${provider}`);
     }
-  }, [provider, model, streamResponse, onFinish]);
+  }, [provider, model, apiKey]);
+
+  // Convert Message[] to CoreMessage[]
+  const convertToCoreMessages = (messages: Message[]): CoreMessage[] => {
+    return messages.map(msg => ({
+      role: msg.role as 'user' | 'assistant' | 'system',
+      content: msg.content
+    }));
+  };
 
   // Handle form submission
   const handleSubmit = useCallback(async (e?: React.FormEvent) => {
@@ -110,6 +83,7 @@ For now, this demo shows the chat interface functionality with mock responses.`;
 
     setError(null);
     setIsLoading(true);
+    setStatus('loading');
 
     // Create abort controller
     abortControllerRef.current = new AbortController();
@@ -123,26 +97,120 @@ For now, this demo shows the chat interface functionality with mock responses.`;
     };
 
     // Add user message to state and clear input
-    setMessages(prev => [...prev, userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
     setInput('');
 
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Stream the mock response
-      await streamMockResponse(userMessage);
+      // Create assistant message placeholder
+      const assistantMessage: Message = {
+        id: generateId(),
+        role: 'assistant',
+        content: '',
+        createdAt: new Date()
+      };
+
+      // Add assistant message to state
+      setMessages(prev => [...prev, assistantMessage]);
+
+      // Get the model instance
+      const modelInstance = getModel();
+
+      // Convert messages to core messages format
+      const coreMessages = convertToCoreMessages(updatedMessages);
+
+      if (streamResponse) {
+        // Stream the response
+        const result = await streamText({
+          model: modelInstance,
+          messages: coreMessages,
+          temperature,
+          maxTokens,
+          abortSignal: abortControllerRef.current.signal,
+        });
+
+        // Stream the text content
+        let fullContent = '';
+        for await (const delta of result.textStream) {
+          if (abortControllerRef.current?.signal.aborted) {
+            break;
+          }
+          
+          fullContent += delta;
+          
+          // Update message content
+          setMessages(prev => prev.map(msg => 
+            msg.id === assistantMessage.id 
+              ? { ...msg, content: fullContent }
+              : msg
+          ));
+        }
+
+        // Call onFinish callback
+        if (onFinish && !abortControllerRef.current?.signal.aborted) {
+          const finalMessage = { ...assistantMessage, content: fullContent };
+          onFinish(finalMessage);
+        }
+      } else {
+        // Generate non-streaming response
+        const result = await streamText({
+          model: modelInstance,
+          messages: coreMessages,
+          temperature,
+          maxTokens,
+          abortSignal: abortControllerRef.current.signal,
+        });
+
+        // Wait for the full response
+        const fullText = await result.text;
+        
+        // Update message content
+        setMessages(prev => prev.map(msg => 
+          msg.id === assistantMessage.id 
+            ? { ...msg, content: fullText }
+            : msg
+        ));
+
+        // Call onFinish callback
+        if (onFinish) {
+          const finalMessage = { ...assistantMessage, content: fullText };
+          onFinish(finalMessage);
+        }
+      }
     } catch (err) {
+      // Remove the empty assistant message on error
+      setMessages(prev => prev.slice(0, -1));
+      
       if (err instanceof Error) {
-        setError(err);
+        if (err.name !== 'AbortError') {
+          console.error('[AI Chat] Error:', err);
+          
+          // Provide more helpful error messages
+          let errorMessage = err.message;
+          
+          if (err.message.includes('API key')) {
+            errorMessage = `API key error for ${provider}: ${err.message}`;
+          } else if (err.message.includes('401') || err.message.includes('Unauthorized')) {
+            errorMessage = `Invalid API key for ${provider}. Please check your API key in settings.`;
+          } else if (err.message.includes('429') || err.message.includes('rate limit')) {
+            errorMessage = `Rate limit exceeded for ${provider}. Please try again later.`;
+          } else if (err.message.includes('model')) {
+            errorMessage = `Invalid model "${model}" for ${provider}. Please check the model name.`;
+          } else if (err.message.includes('network') || err.message.includes('fetch')) {
+            errorMessage = `Network error. Please check your internet connection.`;
+          }
+          
+          setError(new Error(errorMessage));
+        }
       } else {
         setError(new Error('An unknown error occurred'));
       }
     } finally {
       setIsLoading(false);
+      setStatus('ready');
       abortControllerRef.current = null;
     }
-  }, [input, isLoading, streamMockResponse]);
+  }, [input, isLoading, messages, streamResponse, getModel, temperature, maxTokens, onFinish, provider, model]);
 
   // Handle input change
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -160,23 +228,13 @@ For now, this demo shows the chat interface functionality with mock responses.`;
     setMessages(prev => [...prev, newMessage]);
 
     if (message.role === 'user') {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        await streamMockResponse(newMessage);
-      } catch (err) {
-        if (err instanceof Error) {
-          setError(err);
-        } else {
-          setError(new Error('An unknown error occurred'));
-        }
-      } finally {
-        setIsLoading(false);
-      }
+      // Temporarily set input to trigger submission
+      const originalInput = input;
+      setInput(newMessage.content);
+      await handleSubmit();
+      setInput(originalInput);
     }
-  }, [streamMockResponse]);
+  }, [input, handleSubmit]);
 
   // Stop the current generation
   const stop = useCallback(() => {
@@ -184,6 +242,7 @@ For now, this demo shows the chat interface functionality with mock responses.`;
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
       setIsLoading(false);
+      setStatus('ready');
     }
   }, []);
 
@@ -206,24 +265,20 @@ For now, this demo shows the chat interface functionality with mock responses.`;
     const newMessages = messages.slice(0, lastUserMessageIndex + 1);
     setMessages(newMessages);
 
-    // Regenerate response
+    // Set the last user message as input and resubmit
     const lastUserMessage = messages[lastUserMessageIndex];
-    setIsLoading(true);
-    setError(null);
+    setInput(lastUserMessage.content);
+    
+    // Use setTimeout to ensure state updates are processed
+    setTimeout(() => {
+      handleSubmit();
+    }, 0);
+  }, [messages, handleSubmit]);
 
-    try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      await streamMockResponse(lastUserMessage);
-    } catch (err) {
-      if (err instanceof Error) {
-        setError(err);
-      } else {
-        setError(new Error('An unknown error occurred'));
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, [messages, streamMockResponse]);
+  // Update messages when initialMessages change
+  useEffect(() => {
+    setMessages(initialMessages);
+  }, [initialMessages]);
 
   return {
     messages,
@@ -236,13 +291,7 @@ For now, this demo shows the chat interface functionality with mock responses.`;
     setMessages,
     append,
     reload,
-    stop
+    stop,
+    status
   };
-}
-
-// Future implementation would include:
-// - Real API integration with OpenAI, Claude, Gemini, and Grok
-// - API key management from app settings
-// - Error handling and retries
-// - Token counting and usage tracking
-// - Web search integration 
+} 
